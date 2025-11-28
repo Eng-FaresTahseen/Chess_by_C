@@ -6,7 +6,7 @@
 typedef struct {
     Color color;                // لون اللاعب
     Piece pieces[16];           // الـ16 قطعة
-    
+    Piece captured_piece[15];
     // حالة اللعب (خاصة باللاعب فقط)
     int is_in_check;            // في كش؟
     int can_castle_kingside;    // يقدر يعمل تبييت يمين؟

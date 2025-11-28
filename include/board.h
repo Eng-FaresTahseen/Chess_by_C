@@ -32,7 +32,7 @@ typedef struct {
 void init_board(Board *board);
 int check_in_bounds(int x, int y);
 void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren);
-Type move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count);
+void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count);
 MoveList get_possible_moves(Board *board, int row, int col);
 int is_in_check(Board *board, Color color);
 int is_checkmate(Board *board, Color color);

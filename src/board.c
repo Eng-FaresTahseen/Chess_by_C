@@ -111,46 +111,48 @@ MoveList get_possible_moves(Board *board, int row, int col) {
     return move_list;}
 
 // move_piece implementation would go here
-Type move_piece(Board board[], int from_row, int from_col, int to_row, int to_col , int move_count) {
-    Type captured_type = -1;
-    // Implementation of piece movement logic goes here
-    board[move_count + 1].board_places[to_row][to_col] = board[move_count].board_places[from_row][from_col];
-    if (board[move_count].board_places[to_row][to_col].in_game) {
-        // Capture the piece
-        board[move_count].board_places[to_row][to_col].in_game = 0;
-        board[move_count + 1].board_places[to_row][to_col].captured = 1;
-        captured_type = board[move_count].board_places[to_row][to_col].piece_type;
-        board[move_count + 1].players[(board[move_count].board_places[to_row][to_col].color == WHITE) ? BLACK : WHITE].total_captured += 1;
-        board[move_count + 1].players[(board[move_count].board_places[to_row][to_col].color)].total_pieces -= 1;
+void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count) {
+    board[move_count + 1] = board[move_count];
+    int dest_was_occupied = board[move_count].board_places[to_row][to_col].in_game;
+    Piece dest_piece = board[move_count].board_places[to_row][to_col];
+    Piece moving_piece = board[move_count].board_places[from_row][from_col];
+    if (!moving_piece.in_game) {
+        return;
     }
-    // Update piece position
+    if (dest_was_occupied) {
+        Color captured_color = dest_piece.color;
+        Color capturer_color = moving_piece.color;
+        int captured_index = board[move_count + 1].players[capturer_color].total_captured;
+        board[move_count + 1].players[capturer_color].captured_piece[captured_index] = dest_piece;
+        board[move_count + 1].players[capturer_color].total_captured += 1;
+        board[move_count + 1].players[captured_color].total_pieces -= 1;
+        board[move_count + 1].board_places[to_row][to_col].captured = 1;
+    }
+    board[move_count + 1].board_places[to_row][to_col] = moving_piece;
     board[move_count + 1].board_places[to_row][to_col].row = to_row;
     board[move_count + 1].board_places[to_row][to_col].col = to_col;
     board[move_count + 1].board_places[to_row][to_col].has_moved = 1;
+    board[move_count + 1].board_places[to_row][to_col].in_game = 1;
+    board[move_count + 1].board_places[to_row][to_col].selected = 0;
+    board[move_count + 1].board_places[from_row][from_col].in_game = 0;
+    board[move_count + 1].board_places[from_row][from_col].selected = 0;
     board[move_count + 1].last_move = (Move){from_row, from_col};
     board[move_count + 1].move_count = move_count + 1;
     board[move_count + 1].current_turn = (board[move_count].current_turn == WHITE) ? BLACK : WHITE;
-    // If a piece was captured, update the halfmove clock
-    if (board[move_count].board_places[to_row][to_col].in_game) {
+
+    if (dest_was_occupied || moving_piece.piece_type == PAWN) {
         board[move_count + 1].halfmove_clock = 0;
     } else {
         board[move_count + 1].halfmove_clock = board[move_count].halfmove_clock + 1;
     }
-    // Copy unchanged pieces
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            if (!((i == to_row && j == to_col) || (i == from_row && j == from_col))) {
-                board[move_count + 1].board_places[i][j] = board[move_count].board_places[i][j];
-            }
+    board[move_count + 1].fullmove_number = board[move_count].fullmove_number + (moving_piece.color == BLACK ? 1 : 0);
+
+    for (int i=0; i<8; i++) {
+        for (int j=0; j<8; j++) {
+            board[move_count + 1].chessboard[i][j].x = 80 + j*80;
+            board[move_count + 1].chessboard[i][j].y = 125 + i*80;
+            board[move_count + 1].chessboard[i][j].w = 80;
+            board[move_count + 1].chessboard[i][j].h = 80;
         }
     }
-    for (int i=0 ; i < 8 ; i++){
-        for (int j=0 ; j < 8 ; j++){
-            (board[move_count+1].chessboard[i][j]).x = 80 + j*80;
-            (board[move_count+1].chessboard[i][j]).y = 125 + i*80;
-            (board[move_count+1].chessboard[i][j]).w = 80;
-            (board[move_count+1].chessboard[i][j]).h = 80;
-        }
-    }
-    return captured_type;
 }
