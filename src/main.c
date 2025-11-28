@@ -4,8 +4,7 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 920
 
-void draw_text(SDL_Renderer* ren, TTF_Font* font,
-               const char* text, SDL_Color color, int x, int y)
+void draw_text(SDL_Renderer* ren, TTF_Font* font,const char* text, SDL_Color color, int x, int y)
 {
     SDL_Surface* surf = TTF_RenderText_Solid(font, text, color);
     SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
@@ -13,6 +12,15 @@ void draw_text(SDL_Renderer* ren, TTF_Font* font,
     SDL_RenderCopy(ren, tex, NULL, &rect);
     SDL_FreeSurface(surf);
     SDL_DestroyTexture(tex);
+}
+
+int is_clicked_highlighted_square(MoveList highlighted , int row , int col) {
+    for (int i = 0; i < highlighted.count; i++) {
+        if (highlighted.moves[i].row == row && highlighted.moves[i].col == col) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 int main(int argc, char* argv[]) {
@@ -50,8 +58,7 @@ int main(int argc, char* argv[]) {
     }
     
     // Game variables
-
-
+    
     //selected square
     MoveList highlighted_squares;
     highlighted_squares.count = 0;
@@ -66,7 +73,10 @@ int main(int argc, char* argv[]) {
     init_board(&board[move_count]); // initialize the first board
     Player current_player = board[move_count].players[WHITE]; // current player pointer
     SDL_Event event;
+
+    Type pieces_captured_type[2][15]; // types of captured pieces for display
     SDL_Rect pieces_captured[2][15]; // rectangles for captured pieces display
+
     SDL_Color color_black = {0, 0, 0, 255};
     char letters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'};
     int numbers[] = {8, 7, 6, 5, 4, 3, 2, 1};
@@ -152,7 +162,6 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-
         // show highlights after drawing pieces so they are visible on top
         show_possible_moves(&board[move_count] , highlighted_squares , ren);
         // options
@@ -211,6 +220,7 @@ int main(int argc, char* argv[]) {
         // show current command
         const char* command_str = commands[command_index];
         draw_text(ren, font, command_str, color_black, 20, 880);
+        // Event handling
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = 0;
@@ -221,7 +231,9 @@ int main(int argc, char* argv[]) {
                 y = event.button.y;
                 // Handle mouse click at (x, y)
                 if (check_in_bounds(x, y)) {
-                    if ((board[move_count].board_places[(y - 125) / 80][(x - 80) / 80].in_game) && (board[move_count].board_places[(y - 125) / 80][(x - 80) / 80].color == ((move_count % 2 == 0) ? WHITE : BLACK))) {
+                    int row = (y - 125) / 80;
+                    int col = (x - 80) / 80;
+                    if ((board[move_count].board_places[row][col].in_game) && (board[move_count].board_places[row][col].color == ((move_count % 2 == 0) ? WHITE : BLACK))) {
                         // Piece selected
                         int selecting = 1;
                         board[move_count].selected_piece = &board[move_count].board_places[(y - 125) / 80][(x - 80) / 80];
@@ -231,11 +243,72 @@ int main(int argc, char* argv[]) {
                             highlighted_squares.moves[i].col = possible_moves.moves[i].col;
                         }
                         highlighted_squares.count = possible_moves.count;
-                        }
+                        } else if ((board[move_count].selected_piece != NULL) && is_clicked_highlighted_square(highlighted_squares , row , col)) {
+                            // Move selected piece
+                            int from_row = board[move_count].selected_piece->row;
+                            int from_col = board[move_count].selected_piece->col;
+                            int to_row = row;
+                            int to_col = col;
+                            Type captured_piece = move_piece(board, from_row, from_col, to_row, to_col , move_count);
+                            // Handle captured pieces display here
+                            if (captured_piece != -1) {
+                                Color opponent_color = (board[move_count].selected_piece->color == WHITE) ? BLACK : WHITE;
+                                int captured_index = board[move_count].players[opponent_color].total_captured;
+                                pieces_captured_type[opponent_color][captured_index] = (Type)captured_piece;
+                            }
+                            // Clear selection and highlights
+                            board[move_count].selected_piece = NULL;
+                            highlighted_squares.count = 0;
+                            for (int i = 0; i < 27; i++) {
+                                highlighted_squares.moves[i].row = -1;
+                                highlighted_squares.moves[i].col = -1;
+                            }
+                            move_count++;
+                            current_player = board[move_count].players[(move_count % 2 == 0) ? WHITE : BLACK];
+                            }
                 }
             }
         }
-        SDL_RenderPresent(ren);
+
+        // White captured pieces
+        if (board[move_count].players[WHITE].total_captured > 0) {
+            for (int i = 0; i < board[move_count].players[WHITE].total_captured; i++) {
+                Type captured_type = (Type)pieces_captured_type[WHITE][i];
+                char filepath[50];
+                sprintf(filepath, "./assets/%s_black.png",
+                        (captured_type == PAWN) ? "pawn" :
+                        (captured_type == ROOK) ? "rook" :
+                        (captured_type == KNIGHT) ? "knight" :
+                        (captured_type == BISHOP) ? "bishop" :
+                        (captured_type == QUEEN) ? "queen" : "king");
+                SDL_Surface* piece_surf = IMG_Load(filepath);
+                SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
+                SDL_Rect dest_rect = pieces_captured[WHITE][i];
+                SDL_RenderCopy(ren, piece_tex, NULL, &dest_rect);
+                SDL_FreeSurface(piece_surf);
+                SDL_DestroyTexture(piece_tex);
+            }
+        // Black captured pieces
+        if (board[move_count].players[BLACK].total_captured > 0) {
+            for (int i = 0; i < board[move_count].players[BLACK].total_captured; i++) {
+                Type captured_type = (Type)pieces_captured_type[BLACK][i];
+                char filepath[50];
+                sprintf(filepath, "./assets/%s_white.png",
+                        (captured_type == PAWN) ? "pawn" :
+                        (captured_type == ROOK) ? "rook" :
+                        (captured_type == KNIGHT) ? "knight" :
+                        (captured_type == BISHOP) ? "bishop" :
+                        (captured_type == QUEEN) ? "queen" : "king");
+                SDL_Surface* piece_surf = IMG_Load(filepath);
+                SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
+                SDL_Rect dest_rect = pieces_captured[BLACK][i];
+                SDL_RenderCopy(ren, piece_tex, NULL, &dest_rect);
+                SDL_FreeSurface(piece_surf);
+                SDL_DestroyTexture(piece_tex);
+            }
+        }
+        }
+       SDL_RenderPresent(ren);
     }
     TTF_CloseFont(font);
     TTF_Quit();
