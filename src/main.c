@@ -1,7 +1,6 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
+#include "board.h"
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 920
 
@@ -53,8 +52,10 @@ int main(int argc, char* argv[]) {
 
     int running = 1;
     int move_count = 0; // move counter and also indicates turn (white starts)
+    Board board;
+    init_board(&board);
     SDL_Event event;
-    SDL_Rect chessboard[8][8] , pieces_captured[2][15];
+    SDL_Rect pieces_captured[2][15]; // rectangles for captured pieces display
     SDL_Color color_black = {0, 0, 0, 255};
     char letters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'};
     int numbers[] = {8, 7, 6, 5, 4, 3, 2, 1};
@@ -62,10 +63,10 @@ int main(int argc, char* argv[]) {
     // Initialize chessboard squares
     for (int i=0 ; i<8 ; i++){
         for (int j=0 ; j<8 ; j++){
-            chessboard[i][j].x = 80 + j*80;
-            chessboard[i][j].y = 125 + i*80;
-            chessboard[i][j].w = 80;
-            chessboard[i][j].h = 80;  
+            (board.chessboard[i][j]).x = 80 + j*80;
+            (board.chessboard[i][j]).y = 125 + i*80;
+            (board.chessboard[i][j]).w = 80;
+            (board.chessboard[i][j]).h = 80;
         };
     };
     // Initialize captured pieces areas
@@ -100,7 +101,7 @@ int main(int argc, char* argv[]) {
                 } else {
                     SDL_SetRenderDrawColor(ren, 128, 128, 128, 255);
                 }
-                SDL_RenderFillRect(ren, &chessboard[i][j]);
+                SDL_RenderFillRect(ren, &(board.chessboard[i][j]));
             }
         };
         // draw letters and numbers
@@ -137,6 +138,32 @@ int main(int argc, char* argv[]) {
             SDL_RenderCopy(ren, option_tex, NULL, &text_rect);
             SDL_FreeSurface(option_surf);
             SDL_DestroyTexture(option_tex);
+        }
+        // draw pieces
+        for(int row = 0; row < 8; row++) {
+            for(int col = 0; col < 8; col++) {
+                Piece piece = board.board_places[row][col];
+                if (piece.in_game) {
+                    char filepath[50];
+                    const char* color_str = (piece.color == WHITE) ? "white" : "black";
+                    const char* type_str;
+                    switch (piece.piece_type) {
+                        case PAWN: type_str = "pawn"; break;
+                        case ROOK: type_str = "rook"; break;
+                        case KNIGHT: type_str = "knight"; break;
+                        case BISHOP: type_str = "bishop"; break;
+                        case QUEEN: type_str = "queen"; break;
+                        case KING: type_str = "king"; break;
+                    }
+                    sprintf(filepath, "./assets/%s_%s.png", type_str, color_str);
+                    SDL_Surface* piece_surf = IMG_Load(filepath);
+                    SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
+                    SDL_Rect dest_rect = board.chessboard[row][col];
+                    SDL_RenderCopy(ren, piece_tex, NULL, &dest_rect);
+                    SDL_FreeSurface(piece_surf);
+                    SDL_DestroyTexture(piece_tex);
+                }
+            }
         }
         // player turn display
         const char* turn_str = (move_count % 2 == 0) ? "White's Turn" : "Black's Turn";
