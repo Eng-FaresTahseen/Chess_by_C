@@ -2,18 +2,6 @@
 #define GAME_H
 #include "pieces.h"
 
-// الحركة
-typedef struct {
-    int row;
-    int col;
-} Move;
-
-// قائمة الحركات
-typedef struct {
-    Move moves[27];
-    int count;
-} MoveList;
-
 // اللاعب
 typedef struct {
     Color color;                // لون اللاعب

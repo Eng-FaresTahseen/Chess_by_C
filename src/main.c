@@ -15,20 +15,19 @@ void draw_text(SDL_Renderer* ren, TTF_Font* font,
     SDL_DestroyTexture(tex);
 }
 
-
 int main(int argc, char* argv[]) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
         return 1;
     }
-
+    
     SDL_Window *win = SDL_CreateWindow("Chess" ,SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WINDOW_WIDTH,WINDOW_HEIGHT,SDL_WINDOW_SHOWN);
     if (win == NULL) {
         printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
         SDL_Quit();
         return 1;
     }
-
+    
     SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (ren == NULL) {
         SDL_DestroyWindow(win);
@@ -36,24 +35,36 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
         return 1;
     }
-
-    if (TTF_Init() == -1) {
-    printf("TTF_Init Error: %s\n", TTF_GetError());
-    return 1;
-    }
-
-    TTF_Font* font = TTF_OpenFont("assets/arial.ttf", 24); 
-    if (!font) {
-    printf("TTF_OpenFont Error: %s\n", TTF_GetError());
-    return 1;
-    }
+    SDL_SetRenderDrawBlendMode(ren, SDL_BLENDMODE_BLEND);
 
     
+    if (TTF_Init() == -1) {
+        printf("TTF_Init Error: %s\n", TTF_GetError());
+        return 1;
+    }
+    
+    TTF_Font* font = TTF_OpenFont("assets/arial.ttf", 24); 
+    if (!font) {
+        printf("TTF_OpenFont Error: %s\n", TTF_GetError());
+        return 1;
+    }
+    
+    // Game variables
 
-    int running = 1;
+
+    //selected square
+    MoveList highlighted_squares;
+    highlighted_squares.count = 0;
+    for (int i = 0; i < 27; i++) {
+        highlighted_squares.moves[i].row = -1;
+        highlighted_squares.moves[i].col = -1;
+    }
+
+    int running = 1 , x , y ; // main loop flag , x, y; // mouse coordinates
     int move_count = 0; // move counter and also indicates turn (white starts)
-    Board board;
-    init_board(&board);
+    Board board[500]; // array of boards to store game states for undo/redo
+    init_board(&board[move_count]); // initialize the first board
+    Player current_player = board[move_count].players[WHITE]; // current player pointer
     SDL_Event event;
     SDL_Rect pieces_captured[2][15]; // rectangles for captured pieces display
     SDL_Color color_black = {0, 0, 0, 255};
@@ -61,12 +72,12 @@ int main(int argc, char* argv[]) {
     int numbers[] = {8, 7, 6, 5, 4, 3, 2, 1};
     char options[][20] = {"New", "Save", "Load", "Undo", "Redo"};
     // Initialize chessboard squares
-    for (int i=0 ; i<8 ; i++){
-        for (int j=0 ; j<8 ; j++){
-            (board.chessboard[i][j]).x = 80 + j*80;
-            (board.chessboard[i][j]).y = 125 + i*80;
-            (board.chessboard[i][j]).w = 80;
-            (board.chessboard[i][j]).h = 80;
+    for (int i=0 ; i < 8 ; i++){
+        for (int j=0 ; j < 8 ; j++){
+            (board[move_count].chessboard[i][j]).x = 80 + j*80;
+            (board[move_count].chessboard[i][j]).y = 125 + i*80;
+            (board[move_count].chessboard[i][j]).w = 80;
+            (board[move_count].chessboard[i][j]).h = 80;
         };
     };
     // Initialize captured pieces areas
@@ -86,11 +97,6 @@ int main(int argc, char* argv[]) {
     int command_index = 0;
     // Main loop
     while (running) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = 0;
-            }
-        }
         SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
         SDL_RenderClear(ren);
         // draw chessboard
@@ -100,15 +106,15 @@ int main(int argc, char* argv[]) {
                     SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
                 } else {
                     SDL_SetRenderDrawColor(ren, 128, 128, 128, 255);
-                }
-                SDL_RenderFillRect(ren, &(board.chessboard[i][j]));
+                        }
+                SDL_RenderFillRect(ren, &(board[move_count].chessboard[i][j]));
             }
-        };
+        }
         // draw letters and numbers
         for (int i=0 ; i<8 ; i++){
             char letter_str[2] = {letters[i], '\0'};
             draw_text(ren, font, letter_str, color_black, 80 + i*80 + 30, 780);
-
+            
             char number_str[3];
             sprintf(number_str, "%d", numbers[i]);
             draw_text(ren, font, number_str, color_black, 40, 80 + i*80 + 75);
@@ -118,8 +124,37 @@ int main(int argc, char* argv[]) {
             for (int j=0 ; j<15 ; j++){
                 SDL_SetRenderDrawColor(ren, 200, 200, 200, 255);
                 SDL_RenderDrawRect(ren, &pieces_captured[i][j]);
-                };
             };
+        };
+        // draw pieces
+        for(int row = 0; row < 8; row++) {
+            for(int col = 0; col < 8; col++) {
+                Piece piece = board[move_count].board_places[row][col];
+                if (piece.in_game) {
+                    char filepath[50];
+                    const char* color_str = (piece.color == WHITE) ? "white" : "black";
+                    const char* type_str;
+                    switch (piece.piece_type) {
+                        case PAWN: type_str = "pawn"; break;
+                        case ROOK: type_str = "rook"; break;
+                        case KNIGHT: type_str = "knight"; break;
+                        case BISHOP: type_str = "bishop"; break;
+                        case QUEEN: type_str = "queen"; break;
+                        case KING: type_str = "king"; break;
+                    }
+                    sprintf(filepath, "./assets/%s_%s.png", type_str, color_str);
+                    SDL_Surface* piece_surf = IMG_Load(filepath);
+                    SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
+                    SDL_Rect dest_rect = board[move_count].chessboard[row][col];
+                    SDL_RenderCopy(ren, piece_tex, NULL, &dest_rect);
+                    SDL_FreeSurface(piece_surf);
+                    SDL_DestroyTexture(piece_tex);
+                }
+            }
+        }
+
+        // show highlights after drawing pieces so they are visible on top
+        show_possible_moves(&board[move_count] , highlighted_squares , ren);
         // options
         for (int i = 0; i < 5; i++) {
             char* option_str = options[i];
@@ -142,7 +177,7 @@ int main(int argc, char* argv[]) {
         // draw pieces
         for(int row = 0; row < 8; row++) {
             for(int col = 0; col < 8; col++) {
-                Piece piece = board.board_places[row][col];
+                Piece piece = board[move_count].board_places[row][col];
                 if (piece.in_game) {
                     char filepath[50];
                     const char* color_str = (piece.color == WHITE) ? "white" : "black";
@@ -158,7 +193,7 @@ int main(int argc, char* argv[]) {
                     sprintf(filepath, "./assets/%s_%s.png", type_str, color_str);
                     SDL_Surface* piece_surf = IMG_Load(filepath);
                     SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
-                    SDL_Rect dest_rect = board.chessboard[row][col];
+                    SDL_Rect dest_rect = board[move_count].chessboard[row][col];
                     SDL_RenderCopy(ren, piece_tex, NULL, &dest_rect);
                     SDL_FreeSurface(piece_surf);
                     SDL_DestroyTexture(piece_tex);
@@ -176,14 +211,36 @@ int main(int argc, char* argv[]) {
         // show current command
         const char* command_str = commands[command_index];
         draw_text(ren, font, command_str, color_black, 20, 880);
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                running = 0;
+            }
+            // Handle other events (mouse clicks, etc.) here
+            if (event.type == SDL_MOUSEBUTTONDOWN) {
+                x = event.button.x;
+                y = event.button.y;
+                // Handle mouse click at (x, y)
+                if (check_in_bounds(x, y)) {
+                    if ((board[move_count].board_places[(y - 125) / 80][(x - 80) / 80].in_game) && (board[move_count].board_places[(y - 125) / 80][(x - 80) / 80].color == ((move_count % 2 == 0) ? WHITE : BLACK))) {
+                        // Piece selected
+                        int selecting = 1;
+                        board[move_count].selected_piece = &board[move_count].board_places[(y - 125) / 80][(x - 80) / 80];
+                        MoveList possible_moves = get_possible_moves(&board[move_count], board[move_count].selected_piece->row, board[move_count].selected_piece->col);
+                        for (int i=0 ; i < possible_moves.count ; i++){
+                            highlighted_squares.moves[i].row = possible_moves.moves[i].row;
+                            highlighted_squares.moves[i].col = possible_moves.moves[i].col;
+                        }
+                        highlighted_squares.count = possible_moves.count;
+                        }
+                }
+            }
+        }
         SDL_RenderPresent(ren);
     }
-
     TTF_CloseFont(font);
     TTF_Quit();
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
     SDL_Quit();
-
     return 0;
 }

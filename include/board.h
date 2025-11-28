@@ -6,8 +6,8 @@
 #include <SDL2/SDL_image.h>
 
 typedef struct {
-    Piece board_places[8][8];
-    Player players[2];
+    Piece board_places[8][8];// مصفوفة تمثل أماكن القطع على اللوح
+    Player players[2]; // معلومات عن اللاعبين
     Color current_turn;
     SDL_Rect chessboard[8][8];
     
@@ -30,6 +30,8 @@ typedef struct {
 
 // الدوال الأساسية
 void init_board(Board *board);
+int check_in_bounds(int x, int y);
+void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren);
 int is_valid_move(Board *board, int from_row, int from_col, int to_row, int to_col);
 void move_piece(Board *board, int from_row, int from_col, int to_row, int to_col);
 MoveList get_possible_moves(Board *board, int row, int col);

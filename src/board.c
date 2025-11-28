@@ -1,35 +1,42 @@
 #include "board.h"
 
-
+// Board initialization
 void init_board(Board *board){
     for(int row = 0; row < 8; row++) {
         for(int col = 0; col < 8; col++) {
             board->board_places[row][col].in_game = 0;
             board->board_places[row][col].selected = 0;
+            board->board_places[row][col].row = row;
+            board->board_places[row][col].col = col;
+            board->board_places[row][col].captured = 0;
+            board->board_places[row][col].has_moved = 0;
             board->board_places[row][col].is_attacked = 0;
         }
     }
-    board->board_places[0][0] = (Piece){0, 1, 0, 0, WHITE, ROOK, 0, 0, 0};
-    board->board_places[0][1] = (Piece){0, 1, 0, 1, WHITE, KNIGHT, 0, 0, 1};
-    board->board_places[0][2] = (Piece){0, 1, 0, 2, WHITE, BISHOP, 0, 0, 2};
-    board->board_places[0][3] = (Piece){0, 1, 0, 3, WHITE, QUEEN, 0, 0, 3};
-    board->board_places[0][4] = (Piece){0, 1, 0, 4, WHITE, KING, 0, 0, 4};
-    board->board_places[0][5] = (Piece){0, 1, 0, 5, WHITE, BISHOP, 0, 0, 5};
-    board->board_places[0][6] = (Piece){0, 1, 0, 6, WHITE, KNIGHT, 0, 0, 6};
-    board->board_places[0][7] = (Piece){0, 1, 0, 7, WHITE, ROOK, 0, 0, 7};
+    // Place Black pieces at the top (rows 0 and 1)
+    board->board_places[0][0] = (Piece){0, 1, 0, 0, BLACK, ROOK, 0, 0, 0};
+    board->board_places[0][1] = (Piece){0, 1, 0, 1, BLACK, KNIGHT, 0, 0, 1};
+    board->board_places[0][2] = (Piece){0, 1, 0, 2, BLACK, BISHOP, 0, 0, 2};
+    board->board_places[0][3] = (Piece){0, 1, 0, 3, BLACK, QUEEN, 0, 0, 3};
+    board->board_places[0][4] = (Piece){0, 1, 0, 4, BLACK, KING, 0, 0, 4};
+    board->board_places[0][5] = (Piece){0, 1, 0, 5, BLACK, BISHOP, 0, 0, 5};
+    board->board_places[0][6] = (Piece){0, 1, 0, 6, BLACK, KNIGHT, 0, 0, 6};
+    board->board_places[0][7] = (Piece){0, 1, 0, 7, BLACK, ROOK, 0, 0, 7};
     for (int col = 0; col < 8; col++) {
-        board->board_places[1][col] = (Piece){0, 1, 1, col, WHITE, PAWN, 0, 0, 8 + col};
+        board->board_places[1][col] = (Piece){0, 1, 1, col, BLACK, PAWN, 0, 0, 8 + col};
     }
-    board->board_places[7][0] = (Piece){0, 1, 7, 0, BLACK, ROOK, 0, 0, 16};
-    board->board_places[7][1] = (Piece){0, 1, 7, 1, BLACK, KNIGHT, 0, 0, 17};
-    board->board_places[7][2] = (Piece){0, 1, 7, 2, BLACK, BISHOP, 0, 0, 18};
-    board->board_places[7][3] = (Piece){0, 1, 7, 3, BLACK, QUEEN, 0, 0, 19};
-    board->board_places[7][4] = (Piece){0, 1, 7, 4, BLACK, KING, 0, 0, 20};
-    board->board_places[7][5] = (Piece){0, 1, 7, 5, BLACK, BISHOP, 0, 0, 21};
-    board->board_places[7][6] = (Piece){0, 1, 7, 6, BLACK, KNIGHT, 0, 0, 22};
-    board->board_places[7][7] = (Piece){0, 1, 7, 7, BLACK, ROOK, 0, 0, 23};
+
+    // Place White pieces at the bottom (rows 7 and 6)
+    board->board_places[7][0] = (Piece){0, 1, 7, 0, WHITE, ROOK, 0, 0, 16};
+    board->board_places[7][1] = (Piece){0, 1, 7, 1, WHITE, KNIGHT, 0, 0, 17};
+    board->board_places[7][2] = (Piece){0, 1, 7, 2, WHITE, BISHOP, 0, 0, 18};
+    board->board_places[7][3] = (Piece){0, 1, 7, 3, WHITE, QUEEN, 0, 0, 19};
+    board->board_places[7][4] = (Piece){0, 1, 7, 4, WHITE, KING, 0, 0, 20};
+    board->board_places[7][5] = (Piece){0, 1, 7, 5, WHITE, BISHOP, 0, 0, 21};
+    board->board_places[7][6] = (Piece){0, 1, 7, 6, WHITE, KNIGHT, 0, 0, 22};
+    board->board_places[7][7] = (Piece){0, 1, 7, 7, WHITE, ROOK, 0, 0, 23};
     for (int col = 0; col < 8; col++) {
-        board->board_places[6][col] = (Piece){0, 1, 6, col, BLACK, PAWN, 0, 0, 24 + col};
+        board->board_places[6][col] = (Piece){0, 1, 6, col, WHITE, PAWN, 0, 0, 24 + col};
     }
 
     board->players[WHITE].color = WHITE;
@@ -39,7 +46,7 @@ void init_board(Board *board){
     board->players[WHITE].total_pieces = 16;
     board->players[WHITE].total_captured = 0;
     for (int i = 0; i < 16; i++) {
-        board->players[WHITE].pieces[i] = board->board_places[ (i < 8) ? 1 : 0 ][ i % 8 ];
+        board->players[WHITE].pieces[i] = board->board_places[ (i < 8) ? 6 : 7 ][ i % 8 ];
     }
 
     board->players[BLACK].color = BLACK;
@@ -49,7 +56,7 @@ void init_board(Board *board){
     board->players[BLACK].total_pieces = 16;
     board->players[BLACK].total_captured = 0;
     for (int i = 0; i < 16; i++) {
-        board->players[BLACK].pieces[i] = board->board_places[ (i < 8) ? 6 : 7 ][ i % 8 ];
+        board->players[BLACK].pieces[i] = board->board_places[ (i < 8) ? 1 : 0 ][ i % 8 ];
     }
     board->current_turn = WHITE;
     board->move_count = 0;
@@ -61,4 +68,45 @@ void init_board(Board *board){
     board->is_checkmate = 0;
     board->is_stalemate = 0;
     board->is_draw = 0;
+}
+
+// Check if coordinates are within board bounds
+int check_in_bounds(int x, int y) {
+    // Board origin is at (80,125). Each cell is 80px and there are 8 cells.
+    // Valid x: [80, 80 + 8*80) -> [80, 720)
+    // Valid y: [125, 125 + 8*80) -> [125, 765)
+    return (x >= 80 && x < 80 + 8*80 && y >= 125 && y < 125 + 8*80);
+}
+
+// Show possible moves on the board
+void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren) {
+    SDL_SetRenderDrawColor(ren, 0, 255, 0, 100);
+    for (int i = 0; i < moves.count; i++) {
+        int row = moves.moves[i].row;
+        int col = moves.moves[i].col;
+        // guard against out-of-range moves coming from move generation
+        if (row < 0 || row >= 8 || col < 0 || col >= 8) continue;
+        SDL_Rect highlight_rect = board->chessboard[row][col];
+        SDL_RenderFillRect(ren, &highlight_rect);
+    }}
+
+// Get possible moves for a piece
+MoveList get_possible_moves(Board *board, int row, int col) {
+    MoveList move_list;
+    move_list.count = 0;
+    // Implementation of move generation logic goes here
+    if (board->board_places[row][col].piece_type == PAWN) {
+        move_list = pawn_moves(row, col, board->board_places[row][col].color);
+    } else if (board->board_places[row][col].piece_type == ROOK) {
+        move_list = rook_moves(row, col, board->board_places[row][col].color);
+    } else if (board->board_places[row][col].piece_type == KNIGHT) {
+        move_list = knight_moves(row, col, board->board_places[row][col].color);
+    } else if (board->board_places[row][col].piece_type == BISHOP) {
+        move_list = bishop_moves(row, col, board->board_places[row][col].color);
+    } else if (board->board_places[row][col].piece_type == QUEEN) {
+        move_list = queen_moves(row, col, board->board_places[row][col].color);
+    } else if (board->board_places[row][col].piece_type == KING) {
+        move_list = king_moves(row, col, board->board_places[row][col].color);
+    }
+    return move_list;
 }
