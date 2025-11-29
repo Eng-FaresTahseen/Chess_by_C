@@ -65,6 +65,25 @@ int main(int argc, char* argv[]) {
     // Load sound effects
     Mix_Chunk *capture_sound = Mix_LoadWAV("./assets/capture.wav");
     Mix_Chunk *move_sound = Mix_LoadWAV("./assets/move-self.wav");
+
+    // Load pieces images
+    SDL_Texture* piece_textures[2][6]; // [color][piece_type]
+    
+    // White pieces
+    piece_textures[WHITE][PAWN] = IMG_LoadTexture(ren, "./assets/pawn_white.png");
+    piece_textures[WHITE][ROOK] = IMG_LoadTexture(ren, "./assets/rook_white.png");
+    piece_textures[WHITE][KNIGHT] = IMG_LoadTexture(ren, "./assets/knight_white.png");
+    piece_textures[WHITE][BISHOP] = IMG_LoadTexture(ren, "./assets/bishop_white.png");
+    piece_textures[WHITE][QUEEN] = IMG_LoadTexture(ren, "./assets/queen_white.png");
+    piece_textures[WHITE][KING] = IMG_LoadTexture(ren, "./assets/king_white.png");
+    
+    // Black pieces
+    piece_textures[BLACK][PAWN] = IMG_LoadTexture(ren, "./assets/pawn_black.png");
+    piece_textures[BLACK][ROOK] = IMG_LoadTexture(ren, "./assets/rook_black.png");
+    piece_textures[BLACK][KNIGHT] = IMG_LoadTexture(ren, "./assets/knight_black.png");
+    piece_textures[BLACK][BISHOP] = IMG_LoadTexture(ren, "./assets/bishop_black.png");
+    piece_textures[BLACK][QUEEN] = IMG_LoadTexture(ren, "./assets/queen_black.png");
+    piece_textures[BLACK][KING] = IMG_LoadTexture(ren, "./assets/king_black.png");
     
     // Game variables
     
@@ -152,24 +171,9 @@ int main(int argc, char* argv[]) {
             for(int col = 0; col < 8; col++) {
                 Piece piece = board[move_count].board_places[row][col];
                 if (piece.in_game) {
-                    char filepath[50];
-                    const char* color_str = (piece.color == WHITE) ? "white" : "black";
-                    const char* type_str;
-                    switch (piece.piece_type) {
-                        case PAWN: type_str = "pawn"; break;
-                        case ROOK: type_str = "rook"; break;
-                        case KNIGHT: type_str = "knight"; break;
-                        case BISHOP: type_str = "bishop"; break;
-                        case QUEEN: type_str = "queen"; break;
-                        case KING: type_str = "king"; break;
-                    }
-                    sprintf(filepath, "./assets/%s_%s.png", type_str, color_str);
-                    SDL_Surface* piece_surf = IMG_Load(filepath);
-                    SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
+                    SDL_Texture* tex = piece_textures[piece.color][piece.piece_type];
                     SDL_Rect dest_rect = board[move_count].chessboard[row][col];
-                    SDL_RenderCopy(ren, piece_tex, NULL, &dest_rect);
-                    SDL_FreeSurface(piece_surf);
-                    SDL_DestroyTexture(piece_tex);
+                    SDL_RenderCopy(ren, tex, NULL, &dest_rect);
                 }
             }
         }
@@ -277,45 +281,29 @@ int main(int argc, char* argv[]) {
                     }
             }
         }
-
-        // White captured pieces
-        if (board[move_count].players[WHITE].total_captured > 0) {
-            for (int i = 0; i < board[move_count].players[WHITE].total_captured; i++) {
-                Type captured_type = board[move_count].players[WHITE].captured_piece[i].piece_type;
-                char filepath[50];
-                sprintf(filepath, "./assets/%s_black.png",
-                        (captured_type == PAWN) ? "pawn" :
-                        (captured_type == ROOK) ? "rook" :
-                        (captured_type == KNIGHT) ? "knight" :
-                        (captured_type == BISHOP) ? "bishop" :
-                        (captured_type == QUEEN) ? "queen" : "king");
-                SDL_Surface* piece_surf = IMG_Load(filepath);
-                SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
-                SDL_RenderCopy(ren, piece_tex, NULL, &pieces_captured[0][i]);
-                SDL_FreeSurface(piece_surf);
-                SDL_DestroyTexture(piece_tex);
-            }
+    // white captured pieces
+    if (board[move_count].players[WHITE].total_captured > 0) {
+        for (int i = 0; i < board[move_count].players[WHITE].total_captured; i++) {
+            Type captured_type = board[move_count].players[WHITE].captured_piece[i].piece_type;
+            SDL_Texture* tex = piece_textures[BLACK][captured_type];
+            SDL_RenderCopy(ren, tex, NULL, &pieces_captured[0][i]);
         }
-        // Black captured pieces
-        if (board[move_count].players[BLACK].total_captured > 0) {
-            for (int i = 0; i < board[move_count].players[BLACK].total_captured; i++) {
-                Type captured_type = board[move_count].players[BLACK].captured_piece[i].piece_type;
-                char filepath[50];
-                sprintf(filepath, "./assets/%s_white.png",
-                        (captured_type == PAWN) ? "pawn" :
-                        (captured_type == ROOK) ? "rook" :
-                        (captured_type == KNIGHT) ? "knight" :
-                        (captured_type == BISHOP) ? "bishop" :
-                        (captured_type == QUEEN) ? "queen" : "king");
-                SDL_Surface* piece_surf = IMG_Load(filepath);
-                SDL_Texture* piece_tex = SDL_CreateTextureFromSurface(ren, piece_surf);
-                SDL_RenderCopy(ren, piece_tex, NULL, &pieces_captured[1][i]);
-                SDL_FreeSurface(piece_surf);
-                SDL_DestroyTexture(piece_tex);
-            }
+    }
+    // black captured pieces
+    if (board[move_count].players[BLACK].total_captured > 0) {
+        for (int i = 0; i < board[move_count].players[BLACK].total_captured; i++) {
+            Type captured_type = board[move_count].players[BLACK].captured_piece[i].piece_type;
+            SDL_Texture* tex = piece_textures[WHITE][captured_type];
+            SDL_RenderCopy(ren, tex, NULL, &pieces_captured[1][i]);
         }
+    }
         
        SDL_RenderPresent(ren);
+    }
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 6; j++) {
+            SDL_DestroyTexture(piece_textures[i][j]);
+        }
     }
     if (capture_sound) Mix_FreeChunk(capture_sound);
     if (move_sound) Mix_FreeChunk(move_sound);
