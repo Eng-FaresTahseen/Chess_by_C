@@ -111,7 +111,12 @@ MoveList get_possible_moves(Board *board, int row, int col) {
     return move_list;}
 
 // move_piece implementation would go here
-void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count) {
+void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count , Mix_Chunk *sound) {
+    if (sound != NULL) {
+        Mix_PlayChannel(-1, sound, 0);
+    } else {
+        printf("Failed to load sound: %s\n", Mix_GetError());
+    }
     board[move_count + 1] = board[move_count];
     int dest_was_occupied = board[move_count].board_places[to_row][to_col].in_game;
     Piece dest_piece = board[move_count].board_places[to_row][to_col];
@@ -126,8 +131,7 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
         board[move_count + 1].players[capturer_color].captured_piece[captured_index] = dest_piece;
         board[move_count + 1].players[capturer_color].total_captured += 1;
         board[move_count + 1].players[captured_color].total_pieces -= 1;
-        board[move_count + 1].board_places[to_row][to_col].captured = 1;
-    }
+        board[move_count + 1].board_places[to_row][to_col].captured = 1;}
     board[move_count + 1].board_places[to_row][to_col] = moving_piece;
     board[move_count + 1].board_places[to_row][to_col].row = to_row;
     board[move_count + 1].board_places[to_row][to_col].col = to_col;

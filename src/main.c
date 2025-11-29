@@ -44,8 +44,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     SDL_SetRenderDrawBlendMode(ren, SDL_BLENDMODE_BLEND);
-
-    
+  
     if (TTF_Init() == -1) {
         printf("TTF_Init Error: %s\n", TTF_GetError());
         return 1;
@@ -56,6 +55,16 @@ int main(int argc, char* argv[]) {
         printf("TTF_OpenFont Error: %s\n", TTF_GetError());
         return 1;
     }
+    SDL_Init(SDL_INIT_AUDIO);
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 512) < 0) {
+        printf("Mix_OpenAudio Error: %s\n", Mix_GetError());
+        return 1;
+    }
+    Mix_AllocateChannels(8);
+
+    // Load sound effects
+    Mix_Chunk *capture_sound = Mix_LoadWAV("./assets/capture.wav");
+    Mix_Chunk *move_sound = Mix_LoadWAV("./assets/move-self.wav");
     
     // Game variables
     
@@ -225,7 +234,7 @@ int main(int argc, char* argv[]) {
                             int from_col = board[move_count].selected_piece->col;
                             int to_row = row;
                             int to_col = col;
-                            move_piece(board, from_row, from_col, to_row, to_col , move_count);
+                            move_piece(board, from_row, from_col, to_row, to_col , move_count , (is_clicked_highlighted_square(highlighted_squares , to_row , to_col) && board[move_count].board_places[to_row][to_col].in_game) ? capture_sound : move_sound);
                             // Clear selection and highlights
                             board[move_count].selected_piece = NULL;
                             highlighted_squares.count = 0;
@@ -308,6 +317,9 @@ int main(int argc, char* argv[]) {
         
        SDL_RenderPresent(ren);
     }
+    if (capture_sound) Mix_FreeChunk(capture_sound);
+    if (move_sound) Mix_FreeChunk(move_sound);
+    Mix_CloseAudio();
     TTF_CloseFont(font);
     TTF_Quit();
     SDL_DestroyRenderer(ren);

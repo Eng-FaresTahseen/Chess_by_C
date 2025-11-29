@@ -4,6 +4,7 @@
 #include "game.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_mixer.h>
 
 typedef struct {
     Piece board_places[8][8];// مصفوفة تمثل أماكن القطع على اللوح
@@ -32,7 +33,7 @@ typedef struct {
 void init_board(Board *board);
 int check_in_bounds(int x, int y);
 void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren);
-void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count);
+void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count , Mix_Chunk *sound);
 MoveList get_possible_moves(Board *board, int row, int col);
 int is_in_check(Board *board, Color color);
 int is_checkmate(Board *board, Color color);

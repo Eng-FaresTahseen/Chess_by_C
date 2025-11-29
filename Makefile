@@ -5,7 +5,7 @@ CC = gcc
 CFLAGS = -Wall -g `sdl2-config --cflags` -Iinclude
 
 # Linker flags
-LDFLAGS = `sdl2-config --libs` -lSDL2_image -lSDL2_ttf
+LDFLAGS = `sdl2-config --libs` -lSDL2_image -lSDL2_ttf -lSDL2_mixer
 
 # Source files
 SRC = src/main.c src/game.c src/file.c src/board.c src/pieces.c
