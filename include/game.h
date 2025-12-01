@@ -1,22 +1,17 @@
 #ifndef GAME_H
 #define GAME_H
 #include "pieces.h"
-
-// اللاعب
 typedef struct {
-    Color color;                // لون اللاعب
-    Piece pieces[16];           // الـ16 قطعة
+    Color color;
+    Piece pieces[16];          
     Piece captured_piece[15];
-    // حالة اللعب (خاصة باللاعب فقط)
-    int is_in_check;            // في كش؟
-    int can_castle_kingside;    // يقدر يعمل تبييت يمين؟
-    int can_castle_queenside;   // يقدر يعمل تبييت شمال؟
+    int is_in_check;       
+    int can_castle_kingside;
+    int can_castle_queenside;
+    int total_pieces;           
+    int total_captured;
     
-    // إحصائيات (مفيدة للعرض)
-    int total_pieces;           // عدد القطع المتبقية
-    int total_captured;         // عدد القطع المأخوذة
-    
-    // ✅ شلنا: en_passant, halfmove_clock, fullmove_number, total_possible_moves
+    // en_passant, halfmove_clock, fullmove_number, total_possible_moves
 } Player;
 
 #endif

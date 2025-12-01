@@ -7,29 +7,23 @@
 #include <SDL2/SDL_mixer.h>
 
 typedef struct {
-    Piece board_places[8][8];// مصفوفة تمثل أماكن القطع على اللوح
-    Player players[2]; // معلومات عن اللاعبين
+    Piece board_places[8][8];      
+    Player players[2]; 
     Color current_turn;
     SDL_Rect chessboard[8][8];
-    
-    // معلومات اللعبة الحالية
     Move last_move;
     int move_count;
     Piece *selected_piece;
-    
-    // ✅ قواعد الشطرنج (خاصة باللعبة كلها)
-    int en_passant_row;      // -1 = مفيش en passant متاح
-    int en_passant_col;      // -1 = مفيش en passant متاح
-    int halfmove_clock;      // للقاعدة الـ50 حركة
-    int fullmove_number;     // رقم الحركة الكامل
-    
-    // حالة اللعبة
-    int is_checkmate;        // انتهت اللعبة (كش مات)؟
-    int is_stalemate;        // تعادل (stalemate)؟
-    int is_draw;             // تعادل (50 حركة أو تكرار)؟
+    int en_passant_row;        
+    int en_passant_col;       
+    int halfmove_clock;         
+    int fullmove_number;
+    int is_checkmate;
+    int is_stalemate;
+    int is_draw;
 } Board;
 
-// الدوال الأساسية
+
 void init_board(Board *board);
 int check_in_bounds(int x, int y);
 void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren);
