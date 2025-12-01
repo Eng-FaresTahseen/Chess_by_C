@@ -56,11 +56,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     SDL_Init(SDL_INIT_AUDIO);
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 512) < 0) {
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
         printf("Mix_OpenAudio Error: %s\n", Mix_GetError());
         return 1;
     }
-    Mix_AllocateChannels(8);
+    Mix_AllocateChannels(16);
 
     // Load sound effects
     Mix_Chunk *capture_sound = Mix_LoadWAV("./assets/capture.wav");
@@ -98,6 +98,7 @@ int main(int argc, char* argv[]) {
     int running = 1 , x , y ; // main loop flag , x, y; // mouse coordinates
     int move_count = 0; // move counter and also indicates turn (white starts)
     int latest_move = move_count;
+    char fen[100]; // FEN string for saving/loading
     Board board[500]; // array of boards to store game states for undo/redo
     init_board(&board[move_count]); // initialize the first board
     Player current_player = board[move_count].players[WHITE]; // current player pointer
@@ -247,6 +248,7 @@ int main(int argc, char* argv[]) {
                                 highlighted_squares.moves[i].col = -1;
                             }
                             move_count++;
+                            board[move_count].fullmove_number = (move_count / 2) + 1;
                             current_player = board[move_count].players[(move_count % 2 == 0) ? WHITE : BLACK];
                             }
                 } else if (x >= 90 && x <= 200 && y >= 10 && y <= 50) {
@@ -261,6 +263,8 @@ int main(int argc, char* argv[]) {
                     } else if (x >= 218 && x <= 328 && y >= 10 && y <= 50) {
                         // Save Game button clicked
                         // Implement save functionality here
+                        board_to_fen(&board[move_count],fen);
+                        if (save_file(fen))
                         command_index = 7; // "Game saved"
                     } else if (x >= 346 && x <= 456 && y >= 10 && y <= 50) {
                         // Load Game button clicked

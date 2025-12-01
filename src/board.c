@@ -113,6 +113,7 @@ MoveList get_possible_moves(Board *board, int row, int col) {
 // move_piece implementation would go here
 void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count , Mix_Chunk *sound) {
     if (sound != NULL) {
+        Mix_HaltChannel(-1);
         Mix_PlayChannel(-1, sound, 0);
     } else {
         printf("Failed to load sound: %s\n", Mix_GetError());

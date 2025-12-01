@@ -39,5 +39,9 @@ int is_in_check(Board *board, Color color);
 int is_checkmate(Board *board, Color color);
 int is_stalemate(Board *board, Color color);
 int get_total_possible_moves(Board *board, Color color);
+int is_file_found(const char *filename);
+char piece_decoder(Type type , Color color);
+void board_to_fen(Board *board, char *fen);
+int save_file(char *fen);
 
 #endif
