@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
     char commands[][40] = {" ","White wins","Black wins","Draw by stalemate",
         "Draw by insufficient material","Draw by threefold repetition",
         "Draw by fifty-move rule","Game saved","Game loaded","Move undone",
-        "Move redone","Invalid move","Check","Which piece to promote to? (Q,R,B,N)"};
+        "Move redone","Invalid move","Check","Which piece to promote to? (Q,R,B,N)","Error has occured"};
     int command_index = 0;
     // Main loop
     while (running) {
@@ -266,6 +266,7 @@ int main(int argc, char* argv[]) {
                         board_to_fen(&board[move_count],fen);
                         if (save_file(fen))
                         command_index = 7; // "Game saved"
+                        else command_index = 14; // "Error has occured"
                     } else if (x >= 346 && x <= 456 && y >= 10 && y <= 50) {
                         // Load Game button clicked
                         // Implement load functionality here
