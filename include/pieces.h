@@ -4,13 +4,12 @@
 typedef enum { WHITE, BLACK } Color;
 typedef enum { PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING } Type;
 
-// الحركة
+ 
 typedef struct {
     int row ;
     int col ;
 } Move;
-
-// قائمة الحركات
+ 
 typedef struct {
     Move moves[27];
     int count;
