@@ -90,34 +90,362 @@ void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren) {
         SDL_RenderFillRect(ren, &highlight_rect);
     }}
 
+// move bounds check
+int move_within_bounds(int row, int col) {
+    return (row >= 0 && row < 8 && col >= 0 && col < 8);
+}
+
+// check that the piece is the piece's opponent
+int is_piece_opponent(Piece p , Color color){
+    if (p.in_game){
+        if (p.color == color){
+            return 0; // same piece
+        } else {
+            return 1 ; // opponent piece
+        }
+    } else {
+        return 2; // empty square
+    }
+}
+
+// pieces moves
+
+// pawn moves
+MoveList pawn_moves(int row, int col, Board board) {
+    MoveList move_list;
+    move_list.count = 0;
+    // Implementation of pawn move generation logic goes here
+    Color current_color = board.board_places[row][col].color;
+    int direction=(current_color==WHITE)? -1:1; // white goes up & black goes down on rows 
+    int start_row=(current_color==WHITE)? 6:1; // bec the array is from 0->7 the index start from top (black first)
+    int possible_moves[4][2] = {{row + direction , col},{row + 2 * direction , col},{row + direction , col -1},{row + direction , col +1}};
+
+        for (int step = 0 ; step < 2 ; step ++){
+            int target_row = possible_moves[step][0];
+            int target_col = possible_moves[step][1];
+            if (step == 1){
+                if (row != start_row) break;
+            }
+            if (move_within_bounds(target_row , target_col)){
+                Piece target_piece = board.board_places[target_row][target_col];
+                if ((is_piece_opponent(target_piece , current_color) == 0)||(is_piece_opponent(target_piece , current_color) == 1)){
+                    break;
+                } else {
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                }
+            }
+        }
+        for (int step = 2 ; step < 4 ; step ++){
+            int target_row = possible_moves[step][0];
+            int target_col = possible_moves[step][1];
+            if (move_within_bounds(target_row , target_col)){
+                Piece target_piece = board.board_places[target_row][target_col];
+                if (is_piece_opponent(target_piece , current_color) == 1){
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                }
+            }
+        }
+        if (board.en_passant_row != -1 && board.en_passant_col != -1){
+            if ((row + direction == board.en_passant_row) && (col - 1 == board.en_passant_col)){
+                move_list.moves[move_list.count].row = board.en_passant_row;
+                move_list.moves[move_list.count].col = board.en_passant_col;
+                move_list.count++;
+            }
+            if ((row + direction == board.en_passant_row) && (col + 1 == board.en_passant_col)){
+                move_list.moves[move_list.count].row = board.en_passant_row;
+                move_list.moves[move_list.count].col = board.en_passant_col;
+                move_list.count++;
+            }
+        }
+    //still thinking
+    return move_list;
+}
+
+// knight moves
+MoveList knight_moves(int row, int col, Board board) {
+    MoveList move_list;
+    move_list.count = 0;
+    Color color = board.board_places[row][col].color;
+    // Implementation of rook move generation logic goes here
+    if (color == WHITE) {
+        if (move_within_bounds(row - 2, col - 1) && is_piece_opponent(board.board_places[row - 2][col - 1] , color)) {
+            move_list.moves[move_list.count++] = (Move){row - 2, col - 1};
+        }
+        if (move_within_bounds(row - 2, col + 1) && is_piece_opponent(board.board_places[row - 2][col + 1], color)) {
+            move_list.moves[move_list.count++] = (Move){row - 2, col + 1};
+        }
+        if (move_within_bounds(row - 1, col - 2)&& is_piece_opponent(board.board_places[row - 1][col - 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row - 1, col - 2};
+        }
+        if (move_within_bounds(row - 1, col + 2)&& is_piece_opponent(board.board_places[row - 1][col + 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row - 1, col + 2};
+        }
+        if (move_within_bounds(row + 1, col - 2)&& is_piece_opponent(board.board_places[row + 1][col - 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 1, col - 2};
+        }
+        if (move_within_bounds(row + 1, col + 2)&& is_piece_opponent(board.board_places[row + 1][col + 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 1, col + 2};
+        }
+        if (move_within_bounds(row + 2, col - 1)&& is_piece_opponent(board.board_places[row + 2][col - 1], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 2, col - 1};
+        }
+        if (move_within_bounds(row + 2, col + 1)&& is_piece_opponent(board.board_places[row + 2][col + 1], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 2, col + 1};
+        }
+    } else {
+        if (move_within_bounds(row - 2, col - 1)&& is_piece_opponent(board.board_places[row - 2][col - 1], color)) {
+            move_list.moves[move_list.count++] = (Move){row - 2, col - 1};
+        }
+        if (move_within_bounds(row - 2, col + 1)&& is_piece_opponent(board.board_places[row - 2][col + 1], color)) {
+            move_list.moves[move_list.count++] = (Move){row - 2, col + 1};
+        }
+        if (move_within_bounds(row - 1, col - 2)&& is_piece_opponent(board.board_places[row - 1][col - 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row - 1, col - 2};
+        }
+        if (move_within_bounds(row - 1, col + 2)&& is_piece_opponent(board.board_places[row - 1][col + 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row - 1, col + 2};
+        }
+        if (move_within_bounds(row + 1, col - 2)&& is_piece_opponent(board.board_places[row + 1][col - 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 1, col - 2};
+        }
+        if (move_within_bounds(row + 1, col + 2)&& is_piece_opponent(board.board_places[row + 1][col + 2], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 1, col + 2};
+        }
+        if (move_within_bounds(row + 2, col - 1)&& is_piece_opponent(board.board_places[row + 2][col - 1], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 2, col - 1};
+        }
+        if (move_within_bounds(row + 2, col + 1)&& is_piece_opponent(board.board_places[row + 2][col + 1], color)) {
+            move_list.moves[move_list.count++] = (Move){row + 2, col + 1};
+        }
+    }
+
+    return move_list;
+}
+
+// rook moves
+MoveList rook_moves(int row, int col, Board board) {
+    MoveList move_list;
+    move_list.count = 0;
+    // Implementation of rook move generation logic goes here
+    
+    Color current_color = board.board_places[row][col].color;
+    
+    int directions[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}; 
+
+    for (int i = 0; i < 4; i++) {
+        int dr = directions[i][0]; 
+        int dc = directions[i][1]; 
+        
+        for (int step = 1; step < 8; step++) {
+            int target_row = row + dr * step;
+            int target_col = col + dc * step;
+
+            Piece target_piece = board.board_places[target_row][target_col];
+
+            if (move_within_bounds(target_row, target_col)) {
+                if (is_piece_opponent(target_piece,current_color) == 0){
+                    break;
+                } else if (is_piece_opponent(target_piece,current_color) == 1){
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                    break;
+                } else if (is_piece_opponent(target_piece,current_color) == 2){
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                }
+            } 
+        }
+    }
+    
+    return move_list;
+}
+
+// bishop moves
+MoveList bishop_moves(int row, int col, Board board) {
+    MoveList move_list;
+    move_list.count = 0;
+    // Implementation of bishop move generation logic goes here
+    Color current_color = board.board_places[row][col].color;   
+    // for the 4 directions:
+
+    int directions[4][2] = {{-1, -1}, {-1, 1}, {1 , -1}, {1 , 1}};
+
+    for (int i = 0; i < 4; i++) {
+        int dr = directions[i][0]; 
+        int dc = directions[i][1]; 
+        
+        for (int step = 1; step < 8; step++) {
+            int target_row = row + dr * step;
+            int target_col = col + dc * step;
+
+            Piece target_piece = board.board_places[target_row][target_col];
+
+            if (move_within_bounds(target_row, target_col)) {
+                if (is_piece_opponent(target_piece,current_color) == 0){
+                    break;
+                } else if (is_piece_opponent(target_piece,current_color) == 1){
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                    break;
+                } else if (is_piece_opponent(target_piece,current_color) == 2){
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                }
+            
+            }
+        }
+    }
+    return move_list;
+}
+
+// queen moves
+MoveList queen_moves(int row, int col, Board board) {
+    MoveList move_list;
+    move_list.count = 0;
+    // Implementation of queen move generation logic goes here
+    Color current_color = board.board_places[row][col].color;
+    // to define the 8 direction:
+
+    int directions[8][2] = {
+        {0, 1}, {0, -1}, {1, 0}, {-1, 0}, 
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+    }; 
+
+    for (int i = 0; i < 8; i++) {
+        int dr = directions[i][0]; // change row
+        int dc = directions[i][1]; // change col
+        
+        // a loop to continue to move in a certain direction:
+        for (int step = 1; step < 8; step++) {
+            int target_row = row + dr * step;
+            int target_col = col + dc * step;
+
+            Piece target_piece = board.board_places[target_row][target_col];
+
+            if (move_within_bounds(target_row, target_col)) {
+                if (is_piece_opponent(target_piece,current_color) == 0){
+                    break;
+                } else if (is_piece_opponent(target_piece,current_color) == 1){
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                    break;
+                } else if (is_piece_opponent(target_piece,current_color) == 2){
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                }
+            } 
+        }
+    }
+    return move_list;
+}
+
+// king moves
+MoveList king_moves(int row, int col, Board board) {
+    MoveList move_list;
+    move_list.count = 0;
+    // Implementation of king move generation logic goes here
+    /*
+    Color current_color = color;
+    
+    int directions[8][2] = {
+        {0, 1}, {0, -1}, {1, 0}, {-1, 0}, 
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+    }; 
+
+    for (int i = 0; i < 8; i++) {
+        int dr = directions[i][0]; 
+        int dc = directions[i][1]; 
+        
+        int target_row = row + dr;
+        int target_col = col + dc;
+
+        if (!move_within_bounds(target_row, target_col)) {
+            continue;
+        }
+
+        Piece* target_piece = BoardGrid[target_row][target_col];
+
+        if (target_piece == NULL) {
+            move_list.moves[move_list.count].row = target_row;
+            move_list.moves[move_list.count].col = target_col;
+            move_list.count++;
+        } else {
+            if (target_piece->color != current_color) {
+                move_list.moves[move_list.count].row = target_row;
+                move_list.moves[move_list.count].col = target_col;
+                move_list.count++;
+            }
+        }
+    }
+    */
+    return move_list;
+}
+
+int check_pawn_promotion(Board board , int row , int col){
+    Piece p = board.board_places[row][col];
+    Color color = p.color ;
+    if (p.piece_type != PAWN){
+        return 0;
+    }
+    if ((color == WHITE)&&(row == 0)){
+        return 1;
+    } else if ((color == BLACK)&&(row == 7)){
+        return 1;
+    }
+    return 0 ;
+}
+
+void promote_pawn(Board *board, int row, int col, Type new_type) {
+    // Update the piece on the board
+    board->board_places[row][col].piece_type = new_type;
+    
+    // Update the piece in the player's pieces array
+    Color player_color = board->board_places[row][col].color;
+    int piece_id = board->board_places[row][col].id;
+    
+    // Find and update the piece in the player's pieces array
+    for (int i = 0; i < 16; i++) {
+        if (board->players[player_color].pieces[i].id == piece_id) {
+            board->players[player_color].pieces[i].piece_type = new_type;
+            break;
+        }
+    }
+}
+
 // Get possible moves for a piece
 MoveList get_possible_moves(Board *board, int row, int col) {
     MoveList move_list;
     move_list.count = 0;
     // Implementation of move generation logic goes here
     if (board->board_places[row][col].piece_type == PAWN) {
-        move_list = pawn_moves(row, col, board->board_places[row][col].color);
+        move_list = pawn_moves(row, col, *board);
     } else if (board->board_places[row][col].piece_type == ROOK) {
-        move_list = rook_moves(row, col, board->board_places[row][col].color);
+        move_list = rook_moves(row, col, *board);
     } else if (board->board_places[row][col].piece_type == KNIGHT) {
-        move_list = knight_moves(row, col, board->board_places[row][col].color);
+        move_list = knight_moves(row, col, *board);
     } else if (board->board_places[row][col].piece_type == BISHOP) {
-        move_list = bishop_moves(row, col, board->board_places[row][col].color);
+        move_list = bishop_moves(row, col, *board);
     } else if (board->board_places[row][col].piece_type == QUEEN) {
-        move_list = queen_moves(row, col, board->board_places[row][col].color);
+        move_list = queen_moves(row, col, *board);
     } else if (board->board_places[row][col].piece_type == KING) {
-        move_list = king_moves(row, col, board->board_places[row][col].color);
+        move_list = king_moves(row, col, *board);
     }
     return move_list;}
 
 // move_piece implementation would go here
-void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count , Mix_Chunk *sound) {
-    if (sound != NULL) {
-        Mix_HaltChannel(-1);
-        Mix_PlayChannel(-1, sound, 0);
-    } else {
-        printf("Failed to load sound: %s\n", Mix_GetError());
-    }
+void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count , Mix_Chunk *sound[]) {
+    int sound_index = 0; // Assuming 0 is the index for move sound
+    Mix_HaltChannel(-1);
     board[move_count + 1] = board[move_count];
     int dest_was_occupied = board[move_count].board_places[to_row][to_col].in_game;
     Piece dest_piece = board[move_count].board_places[to_row][to_col];
@@ -125,7 +453,51 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
     if (!moving_piece.in_game) {
         return;
     }
+    if (moving_piece.piece_type == KING) {
+        board[move_count + 1].players[moving_piece.color].can_castle_kingside = 0;
+        board[move_count + 1].players[moving_piece.color].can_castle_queenside = 0;
+        board[move_count + 1].players[moving_piece.color].is_in_check = 0;
+    }
+    if (moving_piece.piece_type == ROOK) {
+        if (from_col == 0) {
+            board[move_count + 1].players[moving_piece.color].can_castle_queenside = 0;
+        } else if (from_col == 7) {
+            board[move_count + 1].players[moving_piece.color].can_castle_kingside = 0;
+        }
+    }
+    if (moving_piece.piece_type == PAWN) {
+        if (abs(to_row - from_row) == 2) {
+            board[move_count + 1].en_passant_row = (from_row + to_row) / 2;
+            board[move_count + 1].en_passant_col = from_col;
+        } else {
+            board[move_count + 1].en_passant_row = -1;
+            board[move_count + 1].en_passant_col = -1;
+        }
+        int en_passant_row = board[move_count].en_passant_row;
+        int en_passant_col = board[move_count].en_passant_col;
+        // en-passant capture
+        // en passant capture
+    if (to_row == en_passant_row && to_col == en_passant_col) {
+        sound_index = 1;
+        int captured_pawn_row = (moving_piece.color == WHITE) ? to_row + 1 : to_row - 1;
+        Piece captured_pawn = board[move_count + 1].board_places[captured_pawn_row][to_col];
+        Color captured_color = captured_pawn.color;
+        Color capturer_color = moving_piece.color;
+        int captured_index = board[move_count + 1].players[capturer_color].total_captured;
+        board[move_count + 1].players[capturer_color].captured_piece[captured_index] = captured_pawn;
+        board[move_count + 1].players[capturer_color].total_captured += 1;
+        board[move_count + 1].players[captured_color].total_pieces -= 1;
+        board[move_count + 1].board_places[captured_pawn_row][to_col].in_game = 0;
+        board[move_count + 1].board_places[captured_pawn_row][to_col].captured = 1;
+        board[move_count + 1].en_passant_row = -1;
+        board[move_count + 1].en_passant_col = -1;
+    }
+    } else {
+        board[move_count + 1].en_passant_row = -1;
+        board[move_count + 1].en_passant_col = -1;
+    }
     if (dest_was_occupied) {
+        sound_index = 1;
         Color captured_color = dest_piece.color;
         Color capturer_color = moving_piece.color;
         int captured_index = board[move_count + 1].players[capturer_color].total_captured;
@@ -141,7 +513,7 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
     board[move_count + 1].board_places[to_row][to_col].selected = 0;
     board[move_count + 1].board_places[from_row][from_col].in_game = 0;
     board[move_count + 1].board_places[from_row][from_col].selected = 0;
-    board[move_count + 1].last_move = (Move){from_row, from_col};
+    board[move_count + 1].last_move = (Move){to_row, to_col};
     board[move_count + 1].move_count = move_count + 1;
     board[move_count + 1].current_turn = (board[move_count].current_turn == WHITE) ? BLACK : WHITE;
 
@@ -151,6 +523,7 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
         board[move_count + 1].halfmove_clock = board[move_count].halfmove_clock + 1;
     }
     board[move_count + 1].fullmove_number = board[move_count].fullmove_number + (moving_piece.color == BLACK ? 1 : 0);
+    Mix_PlayChannel(-1, sound[sound_index], 0);
 
     for (int i=0; i<8; i++) {
         for (int j=0; j<8; j++) {

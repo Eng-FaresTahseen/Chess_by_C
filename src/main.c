@@ -63,9 +63,12 @@ int main(int argc, char* argv[]) {
     Mix_AllocateChannels(16);
 
     // Load sound effects
-    Mix_Chunk *capture_sound = Mix_LoadWAV("./assets/capture.wav");
-    Mix_Chunk *move_sound = Mix_LoadWAV("./assets/move-self.wav");
-
+    Mix_Chunk *sound[10];   // array of pointers to Mix_Chunk
+    sound[0] = Mix_LoadWAV("./assets/move-self.wav");
+    sound[1] = Mix_LoadWAV("./assets/capture.wav");
+    sound[2] = Mix_LoadWAV("./assets/move-check.wav");
+    sound[3] = Mix_LoadWAV("./assets/castle.wav");
+    sound[4] = Mix_LoadWAV("./assets/promote.wav");
     // Load pieces images
     SDL_Texture* piece_textures[2][6]; // [color][piece_type]
     
@@ -96,12 +99,13 @@ int main(int argc, char* argv[]) {
     }
 
     int running = 1 , x , y ; // main loop flag , x, y; // mouse coordinates
+    int there_is_a_promotion = 0 ; // for the promotion
+    int promoted_row , promoted_col ;
     int move_count = 0; // move counter and also indicates turn (white starts)
     int latest_move = move_count;
     char fen[100]; // FEN string for saving/loading
     Board board[500]; // array of boards to store game states for undo/redo
     init_board(&board[move_count]); // initialize the first board
-    Player current_player = board[move_count].players[WHITE]; // current player pointer
     SDL_Event event;
 
     Type pieces_captured_type[2][15]; // types of captured pieces for display
@@ -216,6 +220,40 @@ int main(int argc, char* argv[]) {
                 running = 0;
             }
             // Handle other events (mouse clicks, etc.) here
+            if (there_is_a_promotion && event.type == SDL_KEYDOWN) {
+                SDL_Keycode key = event.key.keysym.sym;
+                Type promoted_type = QUEEN; // default
+                int valid_promotion = 0;
+                
+                if (key == SDLK_q) {
+                    promoted_type = QUEEN;
+                    valid_promotion = 1;
+                }
+                else if (key == SDLK_r) {
+                    promoted_type = ROOK;
+                    valid_promotion = 1;
+                }
+                else if (key == SDLK_b) {
+                    promoted_type = BISHOP;
+                    valid_promotion = 1;
+                }
+                else if (key == SDLK_n) {
+                    promoted_type = KNIGHT;
+                    valid_promotion = 1;
+                }
+                
+                if (valid_promotion) {
+                    promote_pawn(&board[move_count], promoted_row, promoted_col, promoted_type);
+                    Mix_HaltChannel(-1);
+                    Mix_PlayChannel(-1, sound[4], 0);
+                    there_is_a_promotion = 0;
+                    command_index = 0;
+                }
+                continue;   
+            }
+            if (there_is_a_promotion) {
+                continue;
+            }
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 x = event.button.x;
                 y = event.button.y;
@@ -225,7 +263,7 @@ int main(int argc, char* argv[]) {
                     int col = (x - 80) / 80;
                     if ((board[move_count].board_places[row][col].in_game) && (board[move_count].board_places[row][col].color == ((move_count % 2 == 0) ? WHITE : BLACK))) {
                         // Piece selected
-                        int selecting = 1;
+                        // int selecting = 1;
                         board[move_count].selected_piece = &board[move_count].board_places[(y - 125) / 80][(x - 80) / 80];
                         MoveList possible_moves = get_possible_moves(&board[move_count], board[move_count].selected_piece->row, board[move_count].selected_piece->col);
                         for (int i=0 ; i < possible_moves.count ; i++){
@@ -239,7 +277,14 @@ int main(int argc, char* argv[]) {
                             int from_col = board[move_count].selected_piece->col;
                             int to_row = row;
                             int to_col = col;
-                            move_piece(board, from_row, from_col, to_row, to_col , move_count , (is_clicked_highlighted_square(highlighted_squares , to_row , to_col) && board[move_count].board_places[to_row][to_col].in_game) ? capture_sound : move_sound);
+                            move_piece(board, from_row, from_col, to_row, to_col , move_count , sound);
+                            move_count++;
+                            if (check_pawn_promotion(board[move_count] , to_row , to_col)){
+                                there_is_a_promotion = 1 ; 
+                                command_index = 13 ;
+                                promoted_row = to_row ;
+                                promoted_col = to_col ;
+                            }
                             // Clear selection and highlights
                             board[move_count].selected_piece = NULL;
                             highlighted_squares.count = 0;
@@ -247,9 +292,8 @@ int main(int argc, char* argv[]) {
                                 highlighted_squares.moves[i].row = -1;
                                 highlighted_squares.moves[i].col = -1;
                             }
-                            move_count++;
                             board[move_count].fullmove_number = (move_count / 2) + 1;
-                            current_player = board[move_count].players[(move_count % 2 == 0) ? WHITE : BLACK];
+                            // current_player = board[move_count].players[(move_count % 2 == 0) ? WHITE : BLACK];
                             }
                 } else if (x >= 90 && x <= 200 && y >= 10 && y <= 50) {
                     // New Game button clicked
@@ -310,8 +354,9 @@ int main(int argc, char* argv[]) {
             SDL_DestroyTexture(piece_textures[i][j]);
         }
     }
-    if (capture_sound) Mix_FreeChunk(capture_sound);
-    if (move_sound) Mix_FreeChunk(move_sound);
+    for (int i = 0; i < 5; i++) {
+        Mix_FreeChunk(sound[i]);
+    }
     Mix_CloseAudio();
     TTF_CloseFont(font);
     TTF_Quit();

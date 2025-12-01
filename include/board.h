@@ -1,11 +1,44 @@
 #ifndef BOARD_H
 #define BOARD_H
-#include "pieces.h"
-#include "game.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 
+typedef enum { WHITE, BLACK } Color;
+typedef enum { PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING } Type;
+
+typedef struct {
+    int row ;
+    int col ;
+} Move;
+typedef struct {
+    Move moves[27];
+    int count;
+} MoveList;
+typedef struct {
+    int selected;
+    int in_game;
+    int row, col;
+    Color color;
+    Type piece_type;
+    int has_moved;
+    int is_attacked;
+    int id;
+    int captured;
+}Piece;
+
+typedef struct {
+    Color color;
+    Piece pieces[16];          
+    Piece captured_piece[15];
+    int is_in_check;       
+    int can_castle_kingside;
+    int can_castle_queenside;
+    int total_pieces;           
+    int total_captured;
+    
+    // en_passant, halfmove_clock, fullmove_number, total_possible_moves
+} Player;
 typedef struct {
     Piece board_places[8][8];      
     Player players[2]; 
@@ -23,12 +56,20 @@ typedef struct {
     int is_draw;
 } Board;
 
-
+int move_within_bounds(int row, int col);
+MoveList pawn_moves(int row, int col, Board board);
+MoveList rook_moves(int row, int col, Board board);
+MoveList knight_moves(int row, int col, Board board);
+MoveList bishop_moves(int row, int col, Board board);
+MoveList queen_moves(int row, int col, Board board);
+MoveList king_moves(int row, int col, Board board);
 void init_board(Board *board);
 int check_in_bounds(int x, int y);
 void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren);
-void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count , Mix_Chunk *sound);
+void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count , Mix_Chunk *sound[]);
+int check_pawn_promotion(Board board , int row , int col);
 MoveList get_possible_moves(Board *board, int row, int col);
+void promote_pawn(Board *board, int row, int col, Type new_type);
 int is_in_check(Board *board, Color color);
 int is_checkmate(Board *board, Color color);
 int is_stalemate(Board *board, Color color);

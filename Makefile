@@ -8,8 +8,7 @@ CFLAGS = -Wall -g `sdl2-config --cflags` -Iinclude
 LDFLAGS = `sdl2-config --libs` -lSDL2_image -lSDL2_ttf -lSDL2_mixer
 
 # Source files
-SRC = src/main.c src/game.c src/file.c src/board.c src/pieces.c
-
+SRC = src/main.c src/file.c src/board.c
 # Output executable
 OUT = chess
 
