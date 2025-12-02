@@ -36,7 +36,9 @@ typedef struct {
     int can_castle_queenside;
     int total_pieces;           
     int total_captured;
-    
+    int total_possible_moves;
+    int king_row;
+    int king_col;
     // en_passant, halfmove_clock, fullmove_number, total_possible_moves
 } Player;
 typedef struct {
@@ -78,5 +80,6 @@ int is_file_found(const char *filename);
 char piece_decoder(Type type , Color color);
 void board_to_fen(Board *board, char *fen);
 int save_file(char *fen);
+int is_square_attacked(Board board, int row, int col, Color attacker_color);
 
 #endif

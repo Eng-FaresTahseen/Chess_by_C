@@ -45,6 +45,8 @@ void init_board(Board *board){
     board->players[WHITE].can_castle_queenside = 1;
     board->players[WHITE].total_pieces = 16;
     board->players[WHITE].total_captured = 0;
+    board->players[WHITE].king_row = 7;
+    board->players[WHITE].king_col = 4;
     for (int i = 0; i < 16; i++) {
         board->players[WHITE].pieces[i] = board->board_places[ (i < 8) ? 6 : 7 ][ i % 8 ];
     }
@@ -55,6 +57,8 @@ void init_board(Board *board){
     board->players[BLACK].can_castle_queenside = 1;
     board->players[BLACK].total_pieces = 16;
     board->players[BLACK].total_captured = 0;
+    board->players[BLACK].king_row = 0;
+    board->players[BLACK].king_col = 4;
     for (int i = 0; i < 16; i++) {
         board->players[BLACK].pieces[i] = board->board_places[ (i < 8) ? 1 : 0 ][ i % 8 ];
     }
@@ -324,7 +328,7 @@ MoveList king_moves(int row, int col, Board board) {
         int target_row = row + directions[i][0];
         int target_col = col + directions[i][1];
         
-        if (move_within_bounds(target_row, target_col)) {
+        if (move_within_bounds(target_row, target_col) && is_square_attacked(board, target_row, target_col, (current_color == WHITE) ? BLACK : WHITE) == 0) {
             Piece target_piece = board.board_places[target_row][target_col];
             if (is_piece_opponent(target_piece, current_color)) {
                 move_list.moves[move_list.count].row = target_row;
@@ -333,20 +337,27 @@ MoveList king_moves(int row, int col, Board board) {
             }
         }
     }
+    // Castling moves
     if (board.players[current_color].can_castle_kingside) {
+        if (!(is_square_attacked(board, row, col, (current_color == WHITE) ? BLACK : WHITE)) &&
+            !(is_square_attacked(board, row, col + 1, (current_color == WHITE) ? BLACK : WHITE)) &&
+            !(is_square_attacked(board, row, col + 2, (current_color == WHITE) ? BLACK : WHITE))) {
         if (board.board_places[row][col + 1].in_game == 0 && board.board_places[row][col + 2].in_game == 0) {
             move_list.moves[move_list.count].row = row;
             move_list.moves[move_list.count].col = col + 2;
             move_list.count++;
         }
-    }
+    }}
+    if (!(is_square_attacked(board, row, col, (current_color == WHITE) ? BLACK : WHITE)) &&
+        !(is_square_attacked(board, row, col - 1, (current_color == WHITE) ? BLACK : WHITE)) &&
+        !(is_square_attacked(board, row, col - 2, (current_color == WHITE) ? BLACK : WHITE))) {
     if (board.players[current_color].can_castle_queenside) {
         if (board.board_places[row][col - 1].in_game == 0 && board.board_places[row][col - 2].in_game == 0 && board.board_places[row][col - 3].in_game == 0) {
             move_list.moves[move_list.count].row = row;
             move_list.moves[move_list.count].col = col - 2;
             move_list.count++;
         }
-    }
+    }}
     
     return move_list;
 }
@@ -403,36 +414,91 @@ MoveList get_possible_moves(Board *board, int row, int col) {
     return move_list;}
 
 // move_piece implementation would go here
-void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count , Mix_Chunk *sound[]) {
-    int sound_index = 0; // Assuming 0 is the index for move sound
+void move_piece(Board board[], int from_row, int from_col, int to_row, int to_col, int move_count, Mix_Chunk *sound[]) {
+    int sound_index = 0;
     Mix_HaltChannel(-1);
+    
     board[move_count + 1] = board[move_count];
-    int dest_was_occupied = board[move_count].board_places[to_row][to_col].in_game;
-    Piece dest_piece = board[move_count].board_places[to_row][to_col];
+    
     Piece moving_piece = board[move_count].board_places[from_row][from_col];
-    if (!moving_piece.in_game) {
-        return;
-    }
+    Piece dest_piece = board[move_count].board_places[to_row][to_col];
+    int dest_was_occupied = dest_piece.in_game;
+    
+    if (!moving_piece.in_game) return;
+
+    board[move_count + 1].board_places[to_row][to_col] = moving_piece;
+    board[move_count + 1].board_places[to_row][to_col].row = to_row;
+    board[move_count + 1].board_places[to_row][to_col].col = to_col;
+    board[move_count + 1].board_places[to_row][to_col].has_moved = 1;
+    board[move_count + 1].board_places[from_row][from_col].in_game = 0;
     if (moving_piece.piece_type == KING) {
+        board[move_count + 1].players[moving_piece.color].king_row = to_row;
+        board[move_count + 1].players[moving_piece.color].king_col = to_col;
         board[move_count + 1].players[moving_piece.color].can_castle_kingside = 0;
         board[move_count + 1].players[moving_piece.color].can_castle_queenside = 0;
-        board[move_count + 1].players[moving_piece.color].is_in_check = 0;
+        
+        // (Castling)
         if (abs(to_col - from_col) == 2) {
             sound_index = 3;
-            // Castling move
-            if (to_col == 6) {
-                // Kingside castling
+            if (to_col == 6) { // kingside
                 board[move_count + 1].board_places[to_row][5] = board[move_count + 1].board_places[to_row][7];
                 board[move_count + 1].board_places[to_row][5].col = 5;
                 board[move_count + 1].board_places[to_row][7].in_game = 0;
-            } else if (to_col == 2) {
-                // Queenside castling
+            } else if (to_col == 2) { // queenside
                 board[move_count + 1].board_places[to_row][3] = board[move_count + 1].board_places[to_row][0];
                 board[move_count + 1].board_places[to_row][3].col = 3;
                 board[move_count + 1].board_places[to_row][0].in_game = 0;
             }
         }
     }
+    if (dest_was_occupied) {
+        sound_index = 1;
+        Color capturer_color = moving_piece.color;
+        Color captured_color = dest_piece.color;
+        int captured_index = board[move_count + 1].players[capturer_color].total_captured;
+        board[move_count + 1].players[capturer_color].captured_piece[captured_index] = dest_piece;
+        board[move_count + 1].players[capturer_color].total_captured++;
+        board[move_count + 1].players[captured_color].total_pieces--;
+    }
+    Color opponent_color = (moving_piece.color == WHITE) ? BLACK : WHITE;
+    int opponent_king_row = board[move_count + 1].players[opponent_color].king_row;
+    int opponent_king_col = board[move_count + 1].players[opponent_color].king_col;
+    
+    if (is_square_attacked(board[move_count + 1], opponent_king_row, opponent_king_col, moving_piece.color)) {
+        board[move_count + 1].players[opponent_color].is_in_check = 1;
+        sound_index = 2;
+    } else {
+        board[move_count + 1].players[opponent_color].is_in_check = 0;
+    }
+
+  //    En Passant
+  
+    if (moving_piece.piece_type == PAWN) {
+        if (abs(to_row - from_row) == 2) {
+            board[move_count + 1].en_passant_row = (from_row + to_row) / 2;
+            board[move_count + 1].en_passant_col = from_col;
+        } else {
+            // En passant capture
+            if (to_row == board[move_count].en_passant_row && 
+                to_col == board[move_count].en_passant_col) {
+                sound_index = 1;
+                int captured_pawn_row = (moving_piece.color == WHITE) ? to_row + 1 : to_row - 1;
+                Piece captured_pawn = board[move_count + 1].board_places[captured_pawn_row][to_col];
+                
+                board[move_count + 1].players[moving_piece.color].captured_piece[
+                    board[move_count + 1].players[moving_piece.color].total_captured++
+                ] = captured_pawn;
+                board[move_count + 1].players[captured_pawn.color].total_pieces--;
+                board[move_count + 1].board_places[captured_pawn_row][to_col].in_game = 0;
+            }
+            board[move_count + 1].en_passant_row = -1;
+            board[move_count + 1].en_passant_col = -1;
+        }
+    } else {
+        board[move_count + 1].en_passant_row = -1;
+        board[move_count + 1].en_passant_col = -1;
+    }
+
     if (moving_piece.piece_type == ROOK) {
         if (from_col == 0) {
             board[move_count + 1].players[moving_piece.color].can_castle_queenside = 0;
@@ -440,72 +506,120 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
             board[move_count + 1].players[moving_piece.color].can_castle_kingside = 0;
         }
     }
-    if (moving_piece.piece_type == PAWN) {
-        if (abs(to_row - from_row) == 2) {
-            board[move_count + 1].en_passant_row = (from_row + to_row) / 2;
-            board[move_count + 1].en_passant_col = from_col;
-        } else {
-            board[move_count + 1].en_passant_row = -1;
-            board[move_count + 1].en_passant_col = -1;
-        }
-        int en_passant_row = board[move_count].en_passant_row;
-        int en_passant_col = board[move_count].en_passant_col;
-        // en-passant capture
-        // en passant capture
-    if (to_row == en_passant_row && to_col == en_passant_col) {
-        sound_index = 1;
-        int captured_pawn_row = (moving_piece.color == WHITE) ? to_row + 1 : to_row - 1;
-        Piece captured_pawn = board[move_count + 1].board_places[captured_pawn_row][to_col];
-        Color captured_color = captured_pawn.color;
-        Color capturer_color = moving_piece.color;
-        int captured_index = board[move_count + 1].players[capturer_color].total_captured;
-        board[move_count + 1].players[capturer_color].captured_piece[captured_index] = captured_pawn;
-        board[move_count + 1].players[capturer_color].total_captured += 1;
-        board[move_count + 1].players[captured_color].total_pieces -= 1;
-        board[move_count + 1].board_places[captured_pawn_row][to_col].in_game = 0;
-        board[move_count + 1].board_places[captured_pawn_row][to_col].captured = 1;
-        board[move_count + 1].en_passant_row = -1;
-        board[move_count + 1].en_passant_col = -1;
-    }
-    } else {
-        board[move_count + 1].en_passant_row = -1;
-        board[move_count + 1].en_passant_col = -1;
-    }
-    if (dest_was_occupied) {
-        sound_index = 1;
-        Color captured_color = dest_piece.color;
-        Color capturer_color = moving_piece.color;
-        int captured_index = board[move_count + 1].players[capturer_color].total_captured;
-        board[move_count + 1].players[capturer_color].captured_piece[captured_index] = dest_piece;
-        board[move_count + 1].players[capturer_color].total_captured += 1;
-        board[move_count + 1].players[captured_color].total_pieces -= 1;
-        board[move_count + 1].board_places[to_row][to_col].captured = 1;}
-    board[move_count + 1].board_places[to_row][to_col] = moving_piece;
-    board[move_count + 1].board_places[to_row][to_col].row = to_row;
-    board[move_count + 1].board_places[to_row][to_col].col = to_col;
-    board[move_count + 1].board_places[to_row][to_col].has_moved = 1;
-    board[move_count + 1].board_places[to_row][to_col].in_game = 1;
-    board[move_count + 1].board_places[to_row][to_col].selected = 0;
-    board[move_count + 1].board_places[from_row][from_col].in_game = 0;
-    board[move_count + 1].board_places[from_row][from_col].selected = 0;
+
     board[move_count + 1].last_move = (Move){to_row, to_col};
     board[move_count + 1].move_count = move_count + 1;
-    board[move_count + 1].current_turn = (board[move_count].current_turn == WHITE) ? BLACK : WHITE;
-
+    board[move_count + 1].current_turn = opponent_color;
+    
     if (dest_was_occupied || moving_piece.piece_type == PAWN) {
         board[move_count + 1].halfmove_clock = 0;
     } else {
         board[move_count + 1].halfmove_clock = board[move_count].halfmove_clock + 1;
     }
-    board[move_count + 1].fullmove_number = board[move_count].fullmove_number + (moving_piece.color == BLACK ? 1 : 0);
-    Mix_PlayChannel(-1, sound[sound_index], 0);
+    
+    board[move_count + 1].fullmove_number = board[move_count].fullmove_number + 
+                                            (moving_piece.color == BLACK ? 1 : 0);
 
-    for (int i=0; i<8; i++) {
-        for (int j=0; j<8; j++) {
-            board[move_count + 1].chessboard[i][j].x = 80 + j*80;
-            board[move_count + 1].chessboard[i][j].y = 125 + i*80;
-            board[move_count + 1].chessboard[i][j].w = 80;
-            board[move_count + 1].chessboard[i][j].h = 80;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            board[move_count + 1].chessboard[i][j] = (SDL_Rect){80 + j*80, 125 + i*80, 80, 80};
         }
     }
+
+    Mix_PlayChannel(-1, sound[sound_index], 0);
+}
+
+// detect if the square is attacked or not
+int is_square_attacked(Board board, int row, int col, Color attacker_color) {
+    // Implementation of attack detection logic goes here
+    // Check for pawn attacks
+    int pawn_direction = (attacker_color == WHITE) ? 1 : -1;
+    int pawn_attack_rows[2] = {row + pawn_direction, row + pawn_direction};
+    int pawn_attack_cols[2] = {col - 1, col + 1};
+    for (int i = 0; i < 2; i++) {
+        int r = pawn_attack_rows[i];
+        int c = pawn_attack_cols[i];
+        if (move_within_bounds(r, c)) {
+            Piece p = board.board_places[r][c];
+            if (p.in_game && p.color == attacker_color && p.piece_type == PAWN) {
+                return 1; // Square is attacked by a pawn
+            }
+        }
+    }
+    // Check for knight attacks
+    int knight_offsets[8][2] = {
+        {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
+        {1, -2}, {1, 2}, {2, -1}, {2, 1}
+    };
+    for (int i = 0; i < 8; i++) {
+        int r = row + knight_offsets[i][0];
+        int c = col + knight_offsets[i][1];
+        if (move_within_bounds(r, c)) {
+            Piece p = board.board_places[r][c];
+            if (p.in_game && p.color == attacker_color && p.piece_type == KNIGHT) {
+                return 1; // Square is attacked by a knight
+            }
+        }
+    }
+    // Check for rook/queen attacks (horizontal and vertical)
+    int directions[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    for (int i = 0; i < 4; i++) {
+        int dr = directions[i][0];
+        int dc = directions[i][1];
+        for (int step = 1; step < 8; step++) {
+            int r = row + dr * step;
+            int c = col + dc * step;
+            if (!move_within_bounds(r, c)) break;
+            Piece p = board.board_places[r][c];
+            if (p.in_game) {
+                if (p.color == attacker_color && (p.piece_type == ROOK || p.piece_type == QUEEN)) {
+                    return 1; // Square is attacked by a rook or queen
+                } else {
+                    break; // Blocked by another piece
+                }
+            }
+        }
+    }
+    // Check for bishop/queen attacks (diagonal)
+    int diag_directions[4][2] = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    for (int i = 0; i < 4; i++) {
+        int dr = diag_directions[i][0];
+        int dc = diag_directions[i][1];
+        for (int step = 1; step < 8; step++) {
+            int r = row + dr * step;
+            int c = col + dc * step;
+            if (!move_within_bounds(r, c)) break;
+            Piece p = board.board_places[r][c];
+            if (p.in_game) {
+                if (p.color == attacker_color && (p.piece_type == BISHOP || p.piece_type == QUEEN)) {
+                    return 1; // Square is attacked by a bishop or queen
+                } else {
+                    break; // Blocked by another piece
+                }
+            }
+        }
+    }
+    // Check for king attacks
+    int king_offsets[8][2] = {
+        {-1, -1}, {-1, 0}, {-1, 1},
+        {0, -1},          {0, 1},
+        {1, -1}, {1, 0}, {1, 1}
+    };
+    for (int i = 0; i < 8; i++) {
+        int r = row + king_offsets[i][0];
+        int c = col + king_offsets[i][1];
+        if (move_within_bounds(r, c)) {
+            Piece p = board.board_places[r][c];
+            if (p.in_game && p.color == attacker_color && p.piece_type == KING) {
+                return 1; // Square is attacked by a king
+            }
+        }
+    }
+
+    return 0; // Square is not attacked
+}
+
+// detect if there is checkmate
+int is_checkmate(Board *board, Color color){
+    
 }

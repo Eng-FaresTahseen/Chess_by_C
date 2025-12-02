@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
         highlighted_squares.moves[i].col = -1;
     }
 
-    int running = 1 , x , y ; // main loop flag , x, y; // mouse coordinates
+    int running = 1 , x , y , game_over = 0; // main loop flag , x, y; // mouse coordinates
     int there_is_a_promotion = 0 ; // for the promotion
     int promoted_row , promoted_col ;
     int move_count = 0; // move counter and also indicates turn (white starts)
@@ -107,7 +107,6 @@ int main(int argc, char* argv[]) {
     Board board[500]; // array of boards to store game states for undo/redo
     init_board(&board[move_count]); // initialize the first board
     SDL_Event event;
-
     Type pieces_captured_type[2][15]; // types of captured pieces for display
     SDL_Rect pieces_captured[2][15]; // rectangles for captured pieces display
 
@@ -254,7 +253,7 @@ int main(int argc, char* argv[]) {
             if (there_is_a_promotion) {
                 continue;
             }
-            if (event.type == SDL_MOUSEBUTTONDOWN) {
+            if (event.type == SDL_MOUSEBUTTONDOWN && !game_over) {
                 x = event.button.x;
                 y = event.button.y;
                 // Handle mouse click at (x, y)
@@ -346,7 +345,6 @@ int main(int argc, char* argv[]) {
             SDL_RenderCopy(ren, tex, NULL, &pieces_captured[1][i]);
         }
     }
-        
        SDL_RenderPresent(ren);
     }
     for (int i = 0; i < 2; i++) {
