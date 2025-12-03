@@ -69,6 +69,10 @@ int main(int argc, char* argv[]) {
     sound[2] = Mix_LoadWAV("./assets/move-check.wav");
     sound[3] = Mix_LoadWAV("./assets/castle.wav");
     sound[4] = Mix_LoadWAV("./assets/promote.wav");
+    sound[5] = Mix_LoadWAV("./assets/game-start.wav");
+    sound[6] = Mix_LoadWAV("./assets/game-end.wav");
+    sound[7] = Mix_LoadWAV("./assets/illegal.wav");
+    
     // Load pieces images
     SDL_Texture* piece_textures[2][6]; // [color][piece_type]
     
@@ -133,11 +137,13 @@ int main(int argc, char* argv[]) {
         };
     };
     // commands
-    char commands[][40] = {" ","White wins","Black wins","Draw by stalemate",
+    char commands[][100] = {" ","White wins","Black wins","Draw by stalemate",
         "Draw by insufficient material","Draw by threefold repetition",
         "Draw by fifty-move rule","Game saved","Game loaded","Move undone",
-        "Move redone","Invalid move","Check","Which piece to promote to? (Q,R,B,N)","Error has occured"};
+        "Move redone","Invalid move","Check","Which piece to promote to? (Q,R,B,N)","Error has occured" , "Save it in Saved_Games,enter file name in the terminal"};
     int command_index = 0;
+    int times = 0;
+    int game_end = 1 ;
     // Main loop
     while (running) {
         latest_move = (move_count > latest_move) ? move_count : latest_move;
@@ -213,6 +219,7 @@ int main(int argc, char* argv[]) {
         // show current command
         const char* command_str = commands[command_index];
         draw_text(ren, font, command_str, color_black, 20, 880);
+        if (move_count == 0 && times == 0) {Mix_PlayChannel(-1, sound[5], 0); times = 1 ;}
         // Event handling
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -277,8 +284,9 @@ int main(int argc, char* argv[]) {
                             int to_row = row;
                             int to_col = col;
                             move_piece(board, from_row, from_col, to_row, to_col , move_count , sound);
+                            command_index = 0 ;
                             move_count++;
-                            if (check_pawn_promotion(board[move_count] , to_row , to_col)){
+                            if (check_pawn_promotion(&board[move_count] , to_row , to_col)){
                                 there_is_a_promotion = 1 ; 
                                 command_index = 13 ;
                                 promoted_row = to_row ;
@@ -297,6 +305,7 @@ int main(int argc, char* argv[]) {
                 } else if (x >= 90 && x <= 200 && y >= 10 && y <= 50) {
                     // New Game button clicked
                     move_count = 0;
+                    times = 0 ;
                     init_board(&board[move_count]);
                     highlighted_squares.count = 0;
                     for (int i = 0; i < 27; i++) {
@@ -312,9 +321,44 @@ int main(int argc, char* argv[]) {
                         else command_index = 14; // "Error has occured"
                     } else if (x >= 346 && x <= 456 && y >= 10 && y <= 50) {
                         // Load Game button clicked
-                        // Implement load functionality here
-                        command_index = 8; // "Game loaded"
-                    } else if (x >= 474 && x <= 584 && y >= 10 && y <= 50) {
+                        command_index = 15;
+
+                        char filename[100];
+                        char filepath[200];
+
+                        printf("Enter file name: ");
+                        scanf("%99s", filename);   
+                        sprintf(filepath, "Saved_Games/%s", filename);
+
+                        if (is_file_found(filepath)) {
+                            FILE *file = fopen(filepath, "r");
+                            if (!file) {
+                                printf("Error opening the file!\n");
+                                command_index = 14;
+                            } else {
+                                char fen[200];
+                                if (fgets(fen, sizeof(fen), file) == NULL) {
+                                    printf("Error reading file!\n");
+                                    command_index = 14;
+                                } else {
+                                    fen[strcspn(fen, "\n")] = '\0';
+                                    move_count = 0 ;
+                                    times = 0 ;
+                                    init_board(&board[move_count]);
+                                    fen_to_board(&board[move_count], fen);       
+                                    printf("Game Loaded Successfully!\n");
+                                    command_index = 8 ;
+                                }
+
+                                fclose(file);
+                            }
+
+                        } else {
+                            printf("The file is not found !");
+                            command_index = 14;
+                        }
+                    }
+                    else if (x >= 474 && x <= 584 && y >= 10 && y <= 50) {
                         // Undo button clicked
                         if (move_count > 0) {
                             move_count--;
@@ -345,8 +389,38 @@ int main(int argc, char* argv[]) {
             SDL_RenderCopy(ren, tex, NULL, &pieces_captured[1][i]);
         }
     }
-       SDL_RenderPresent(ren);
+
+    // check game satats
+
+    if (is_checkmate(&board[move_count],(move_count % 2) ? BLACK : WHITE)){
+        game_over = 1 ;
+        if (move_count % 2){
+            // White wins
+            command_index = 1;
+        } else {
+            command_index = 2 ;
+        }
+        if (game_end){
+            Mix_PlayChannel(-1, sound[6], 0);
+            game_end = 0;
+        }}
+        else if(is_stalemate(&board[move_count],(move_count % 2) ? WHITE : BLACK)){
+            command_index = 3 ;
+            if (game_end){
+            Mix_PlayChannel(-1, sound[6], 0);
+            game_end = 0;
+            }
+        }
+
+
+
+
+
+
+        SDL_RenderPresent(ren);
     }
+
+
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 6; j++) {
             SDL_DestroyTexture(piece_textures[i][j]);

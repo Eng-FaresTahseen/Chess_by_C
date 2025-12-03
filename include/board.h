@@ -25,6 +25,7 @@ typedef struct {
     int is_attacked;
     int id;
     int captured;
+    int index_in_player;
 }Piece;
 
 typedef struct {
@@ -59,17 +60,17 @@ typedef struct {
 } Board;
 
 int move_within_bounds(int row, int col);
-MoveList pawn_moves(int row, int col, Board board);
-MoveList rook_moves(int row, int col, Board board);
-MoveList knight_moves(int row, int col, Board board);
-MoveList bishop_moves(int row, int col, Board board);
-MoveList queen_moves(int row, int col, Board board);
-MoveList king_moves(int row, int col, Board board);
+MoveList pawn_moves(int row, int col, Board *board);
+MoveList rook_moves(int row, int col, Board *board);
+MoveList knight_moves(int row, int col, Board *board);
+MoveList bishop_moves(int row, int col, Board *board);
+MoveList queen_moves(int row, int col, Board *board);
+MoveList king_moves(int row, int col, Board *board);
 void init_board(Board *board);
 int check_in_bounds(int x, int y);
 void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren);
 void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count , Mix_Chunk *sound[]);
-int check_pawn_promotion(Board board , int row , int col);
+int check_pawn_promotion(Board *board , int row , int col);
 MoveList get_possible_moves(Board *board, int row, int col);
 void promote_pawn(Board *board, int row, int col, Type new_type);
 int is_in_check(Board *board, Color color);
@@ -80,6 +81,7 @@ int is_file_found(const char *filename);
 char piece_decoder(Type type , Color color);
 void board_to_fen(Board *board, char *fen);
 int save_file(char *fen);
-int is_square_attacked(Board board, int row, int col, Color attacker_color);
-
+void fen_to_board(Board *board, char *fen);
+int is_square_attacked(Board *board, int row, int col, Color attacker_color);
+int is_it_llegal_move (int from_row , int from_col , int to_row , int to_col , Board *board);
 #endif

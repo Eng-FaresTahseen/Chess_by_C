@@ -2,6 +2,76 @@
 # include <stdio.h>
 # include <stdlib.h>
 
+void piece_encoder(char piece, Board *board, int row, int col) {
+    Piece p;
+    p.in_game = 1; 
+
+    switch (piece) {
+        case 'p': 
+            p.piece_type = PAWN;
+            p.color = BLACK;
+            break;
+        case 'P': 
+            p.piece_type = PAWN;
+            p.color = WHITE;
+            break;
+
+        case 'r': 
+            p.piece_type = ROOK;
+            p.color = BLACK;
+            break;
+        case 'R': 
+            p.piece_type = ROOK;
+            p.color = WHITE;
+            break;
+
+        case 'n':  
+            p.piece_type = KNIGHT;
+            p.color = BLACK;
+            break;
+        case 'N':  
+            p.piece_type = KNIGHT;
+            p.color = WHITE;
+            break;
+
+        case 'b': 
+            p.piece_type = BISHOP;
+            p.color = BLACK;
+            break;
+        case 'B':  
+            p.piece_type = BISHOP;
+            p.color = WHITE;
+            break;
+
+        case 'q':  
+            p.piece_type = QUEEN;
+            p.color = BLACK;
+            break;
+        case 'Q': 
+            p.piece_type = QUEEN;
+            p.color = WHITE;
+            break;
+
+        case 'k': 
+            p.piece_type = KING;
+            p.color = BLACK;
+            break;
+        case 'K': 
+            p.piece_type = KING;
+            p.color = WHITE;
+            break;
+
+        default:
+            p.in_game = 0; 
+            break;
+    }
+
+    p.row = row;
+    p.col = col;
+
+    board->board_places[row][col] = p;
+}
+
 
 int is_file_found(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -118,4 +188,70 @@ int save_file(char *fen){
     fprintf(file, "%s", fen);
     fclose(file);
     return 1 ;
+}
+
+void fen_to_board(Board *board, char *fen) {
+    int row = 0, col = 0;
+    int i = 0;
+
+    while (fen[i] != '\0' && fen[i] != ' ') {
+        if (fen[i] >= '1' && fen[i] <= '8') {
+            int empty = fen[i] - '0';
+            for (int j = 0; j < empty; j++) {
+                board->board_places[row][col].in_game = 0;
+                col++;
+            }
+        }
+        else if (fen[i] == '/') {
+            row++;
+            col = 0;
+        }
+        else { 
+            piece_encoder(fen[i], board, row, col);
+            col++;
+        }
+        i++;
+    }
+
+    i++; 
+
+    
+    if (fen[i] == 'w') board->current_turn = WHITE;
+    else if (fen[i] == 'b') board->current_turn = BLACK;
+    i += 2; 
+    board->players[WHITE].can_castle_kingside = 0;
+    board->players[WHITE].can_castle_queenside = 0;
+    board->players[BLACK].can_castle_kingside = 0;
+    board->players[BLACK].can_castle_queenside = 0;
+
+    if (fen[i] == '-') {
+        i += 2; 
+    } else {
+        while (fen[i] != ' ') {
+            switch(fen[i]) {
+                case 'K': board->players[WHITE].can_castle_kingside = 1; break;
+                case 'Q': board->players[WHITE].can_castle_queenside = 1; break;
+                case 'k': board->players[BLACK].can_castle_kingside = 1; break;
+                case 'q': board->players[BLACK].can_castle_queenside = 1; break;
+            }
+            i++;
+        }
+        i++; 
+    }
+
+    
+    if (fen[i] == '-') {
+        board->en_passant_row = -1;
+        board->en_passant_col = -1;
+        i += 2;  
+    } else {
+        board->en_passant_col = fen[i] - 'a';
+        board->en_passant_row = '8' - fen[i+1];
+        i += 3; 
+    }
+
+    
+    board->halfmove_clock = 0;
+    board->fullmove_number = 1;
+    sscanf(fen + i, "%d %d", &board->halfmove_clock, &board->fullmove_number);
 }

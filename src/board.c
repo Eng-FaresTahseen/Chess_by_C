@@ -48,7 +48,8 @@ void init_board(Board *board){
     board->players[WHITE].king_row = 7;
     board->players[WHITE].king_col = 4;
     for (int i = 0; i < 16; i++) {
-        board->players[WHITE].pieces[i] = board->board_places[ (i < 8) ? 6 : 7 ][ i % 8 ];
+        board->players[WHITE].pieces[i] = board->board_places[(i < 8) ? 6 : 7 ][ i % 8 ];
+        board->board_places[(i < 8) ? 6 : 7 ][ i % 8 ].index_in_player = i ;
     }
 
     board->players[BLACK].color = BLACK;
@@ -60,7 +61,8 @@ void init_board(Board *board){
     board->players[BLACK].king_row = 0;
     board->players[BLACK].king_col = 4;
     for (int i = 0; i < 16; i++) {
-        board->players[BLACK].pieces[i] = board->board_places[ (i < 8) ? 1 : 0 ][ i % 8 ];
+        board->players[BLACK].pieces[i] = board->board_places[(i < 8) ? 1 : 0 ][ i % 8 ];
+        board->board_places[(i < 8) ? 1 : 0 ][ i % 8 ].index_in_player = i ;
     }
     board->current_turn = WHITE;
     board->move_count = 0;
@@ -115,11 +117,11 @@ int is_piece_opponent(Piece p , Color color){
 // pieces moves
 
 // pawn moves
-MoveList pawn_moves(int row, int col, Board board) {
+MoveList pawn_moves(int row, int col, Board *board) {
     MoveList move_list;
     move_list.count = 0;
     // Implementation of pawn move generation logic goes here
-    Color current_color = board.board_places[row][col].color;
+    Color current_color = board->board_places[row][col].color;
     int direction=(current_color==WHITE)? -1:1; // white goes up & black goes down on rows 
     int start_row=(current_color==WHITE)? 6:1; // bec the array is from 0->7 the index start from top (black first)
     int possible_moves[4][2] = {{row + direction , col},{row + 2 * direction , col},{row + direction , col -1},{row + direction , col +1}};
@@ -131,13 +133,15 @@ MoveList pawn_moves(int row, int col, Board board) {
                 if (row != start_row) break;
             }
             if (move_within_bounds(target_row , target_col)){
-                Piece target_piece = board.board_places[target_row][target_col];
-                if ((is_piece_opponent(target_piece , current_color) == 0)||(is_piece_opponent(target_piece , current_color) == 1)){
-                    break;
-                } else {
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
+                if (is_it_llegal_move(row , col , target_row , target_col , board)){
+                    Piece target_piece = board->board_places[target_row][target_col];
+                    if ((is_piece_opponent(target_piece , current_color) == 0)||(is_piece_opponent(target_piece , current_color) == 1)){
+                        break;
+                    } else {
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                    }
                 }
             }
         }
@@ -145,24 +149,28 @@ MoveList pawn_moves(int row, int col, Board board) {
             int target_row = possible_moves[step][0];
             int target_col = possible_moves[step][1];
             if (move_within_bounds(target_row , target_col)){
-                Piece target_piece = board.board_places[target_row][target_col];
-                if (is_piece_opponent(target_piece , current_color) == 1){
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
+                if (is_it_llegal_move(row , col , target_row , target_col , board)){
+                    Piece target_piece = board->board_places[target_row][target_col];
+                    if (is_piece_opponent(target_piece , current_color) == 1){
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                    }
                 }
             }
         }
-        if (board.en_passant_row != -1 && board.en_passant_col != -1){
-            if ((row + direction == board.en_passant_row) && (col - 1 == board.en_passant_col)){
-                move_list.moves[move_list.count].row = board.en_passant_row;
-                move_list.moves[move_list.count].col = board.en_passant_col;
-                move_list.count++;
-            }
-            if ((row + direction == board.en_passant_row) && (col + 1 == board.en_passant_col)){
-                move_list.moves[move_list.count].row = board.en_passant_row;
-                move_list.moves[move_list.count].col = board.en_passant_col;
-                move_list.count++;
+        if (board->en_passant_row != -1 && board->en_passant_col != -1){
+            if (is_it_llegal_move(row , col , board->en_passant_row , board->en_passant_col , board)){
+                if ((row + direction == board->en_passant_row) && (col - 1 == board->en_passant_col)){
+                    move_list.moves[move_list.count].row = board->en_passant_row;
+                    move_list.moves[move_list.count].col = board->en_passant_col;
+                    move_list.count++;
+                }
+                if ((row + direction == board->en_passant_row) && (col + 1 == board->en_passant_col)){
+                    move_list.moves[move_list.count].row = board->en_passant_row;
+                    move_list.moves[move_list.count].col = board->en_passant_col;
+                    move_list.count++;
+                }
             }
         }
     //still thinking
@@ -170,9 +178,9 @@ MoveList pawn_moves(int row, int col, Board board) {
 }
 
 // knight moves
-MoveList knight_moves(int row, int col, Board board) {
+MoveList knight_moves(int row, int col, Board *board) {
     MoveList move_list = {0};
-    Color color = board.board_places[row][col].color;
+    Color color = board->board_places[row][col].color;
     
     int knight_offsets[8][2] = {
         {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
@@ -183,8 +191,10 @@ MoveList knight_moves(int row, int col, Board board) {
         int target_row = row + knight_offsets[i][0];
         int target_col = col + knight_offsets[i][1];
         
-        if (move_within_bounds(target_row, target_col) && is_piece_opponent(board.board_places[target_row][target_col], color)) {
-            move_list.moves[move_list.count++] = (Move){target_row, target_col};
+        if (move_within_bounds(target_row, target_col) && is_piece_opponent(board->board_places[target_row][target_col], color)) {
+            if (is_it_llegal_move(row , col , target_row , target_col , board)){
+                move_list.moves[move_list.count++] = (Move){target_row, target_col};
+            }
         }
     }
     
@@ -192,12 +202,12 @@ MoveList knight_moves(int row, int col, Board board) {
 }
 
 // rook moves
-MoveList rook_moves(int row, int col, Board board) {
+MoveList rook_moves(int row, int col, Board *board) {
     MoveList move_list;
     move_list.count = 0;
     // Implementation of rook move generation logic goes here
     
-    Color current_color = board.board_places[row][col].color;
+    Color current_color = board->board_places[row][col].color;
     
     int directions[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}; 
 
@@ -209,21 +219,24 @@ MoveList rook_moves(int row, int col, Board board) {
             int target_row = row + dr * step;
             int target_col = col + dc * step;
 
-            Piece target_piece = board.board_places[target_row][target_col];
+            Piece target_piece = board->board_places[target_row][target_col];
 
             if (move_within_bounds(target_row, target_col)) {
-                if (is_piece_opponent(target_piece,current_color) == 0){
-                    break;
-                } else if (is_piece_opponent(target_piece,current_color) == 1){
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
-                    break;
-                } else if (is_piece_opponent(target_piece,current_color) == 2){
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
+                if (is_it_llegal_move(row , col , target_row , target_col , board)){
+                    if (is_piece_opponent(target_piece,current_color) == 0){
+                        break;
+                    } else if (is_piece_opponent(target_piece,current_color) == 1){
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                        break;
+                    } else if (is_piece_opponent(target_piece,current_color) == 2){
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                    }
                 }
+
             } 
         }
     }
@@ -232,11 +245,11 @@ MoveList rook_moves(int row, int col, Board board) {
 }
 
 // bishop moves
-MoveList bishop_moves(int row, int col, Board board) {
+MoveList bishop_moves(int row, int col, Board *board) {
     MoveList move_list;
     move_list.count = 0;
     // Implementation of bishop move generation logic goes here
-    Color current_color = board.board_places[row][col].color;   
+    Color current_color = board->board_places[row][col].color;   
     // for the 4 directions:
 
     int directions[4][2] = {{-1, -1}, {-1, 1}, {1 , -1}, {1 , 1}};
@@ -249,22 +262,22 @@ MoveList bishop_moves(int row, int col, Board board) {
             int target_row = row + dr * step;
             int target_col = col + dc * step;
 
-            Piece target_piece = board.board_places[target_row][target_col];
-
+            Piece target_piece = board->board_places[target_row][target_col];
             if (move_within_bounds(target_row, target_col)) {
-                if (is_piece_opponent(target_piece,current_color) == 0){
-                    break;
-                } else if (is_piece_opponent(target_piece,current_color) == 1){
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
-                    break;
-                } else if (is_piece_opponent(target_piece,current_color) == 2){
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
+                if (is_it_llegal_move(row , col , target_row , target_col , board)){
+                    if (is_piece_opponent(target_piece,current_color) == 0){
+                        break;}
+                    else if (is_piece_opponent(target_piece,current_color) == 1){
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                        break;}
+                    else if (is_piece_opponent(target_piece,current_color) == 2){
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                    }
                 }
-            
             }
         }
     }
@@ -272,11 +285,11 @@ MoveList bishop_moves(int row, int col, Board board) {
 }
 
 // queen moves
-MoveList queen_moves(int row, int col, Board board) {
+MoveList queen_moves(int row, int col, Board *board) {
     MoveList move_list;
     move_list.count = 0;
     // Implementation of queen move generation logic goes here
-    Color current_color = board.board_places[row][col].color;
+    Color current_color = board->board_places[row][col].color;
     // to define the 8 direction:
 
     int directions[8][2] = {
@@ -293,20 +306,22 @@ MoveList queen_moves(int row, int col, Board board) {
             int target_row = row + dr * step;
             int target_col = col + dc * step;
 
-            Piece target_piece = board.board_places[target_row][target_col];
+            Piece target_piece = board->board_places[target_row][target_col];
 
             if (move_within_bounds(target_row, target_col)) {
-                if (is_piece_opponent(target_piece,current_color) == 0){
-                    break;
-                } else if (is_piece_opponent(target_piece,current_color) == 1){
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
-                    break;
-                } else if (is_piece_opponent(target_piece,current_color) == 2){
-                    move_list.moves[move_list.count].row = target_row;
-                    move_list.moves[move_list.count].col = target_col;
-                    move_list.count++;
+                if (is_it_llegal_move(row , col , target_row , target_col , board)){
+                    if (is_piece_opponent(target_piece,current_color) == 0){
+                        break;
+                    } else if (is_piece_opponent(target_piece,current_color) == 1){
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                        break;
+                    } else if (is_piece_opponent(target_piece,current_color) == 2){
+                        move_list.moves[move_list.count].row = target_row;
+                        move_list.moves[move_list.count].col = target_col;
+                        move_list.count++;
+                    }
                 }
             } 
         }
@@ -315,9 +330,9 @@ MoveList queen_moves(int row, int col, Board board) {
 }
 
 // king moves
-MoveList king_moves(int row, int col, Board board) {
+MoveList king_moves(int row, int col, Board *board) {
     MoveList move_list = {0};
-    Color current_color = board.board_places[row][col].color;
+    Color current_color = board->board_places[row][col].color;
     
     int directions[8][2] = {
         {0, 1}, {0, -1}, {1, 0}, {-1, 0}, 
@@ -329,20 +344,22 @@ MoveList king_moves(int row, int col, Board board) {
         int target_col = col + directions[i][1];
         
         if (move_within_bounds(target_row, target_col) && is_square_attacked(board, target_row, target_col, (current_color == WHITE) ? BLACK : WHITE) == 0) {
-            Piece target_piece = board.board_places[target_row][target_col];
-            if (is_piece_opponent(target_piece, current_color)) {
-                move_list.moves[move_list.count].row = target_row;
-                move_list.moves[move_list.count].col = target_col;
-                move_list.count++;
+            if (is_it_llegal_move(row , col , target_row , target_col , board)){
+                Piece target_piece = board->board_places[target_row][target_col];
+                if (is_piece_opponent(target_piece, current_color)) {
+                    move_list.moves[move_list.count].row = target_row;
+                    move_list.moves[move_list.count].col = target_col;
+                    move_list.count++;
+                }
             }
         }
     }
     // Castling moves
-    if (board.players[current_color].can_castle_kingside) {
+    if (board->players[current_color].can_castle_kingside) {
         if (!(is_square_attacked(board, row, col, (current_color == WHITE) ? BLACK : WHITE)) &&
             !(is_square_attacked(board, row, col + 1, (current_color == WHITE) ? BLACK : WHITE)) &&
             !(is_square_attacked(board, row, col + 2, (current_color == WHITE) ? BLACK : WHITE))) {
-        if (board.board_places[row][col + 1].in_game == 0 && board.board_places[row][col + 2].in_game == 0) {
+        if (board->board_places[row][col + 1].in_game == 0 && board->board_places[row][col + 2].in_game == 0) {
             move_list.moves[move_list.count].row = row;
             move_list.moves[move_list.count].col = col + 2;
             move_list.count++;
@@ -351,8 +368,8 @@ MoveList king_moves(int row, int col, Board board) {
     if (!(is_square_attacked(board, row, col, (current_color == WHITE) ? BLACK : WHITE)) &&
         !(is_square_attacked(board, row, col - 1, (current_color == WHITE) ? BLACK : WHITE)) &&
         !(is_square_attacked(board, row, col - 2, (current_color == WHITE) ? BLACK : WHITE))) {
-    if (board.players[current_color].can_castle_queenside) {
-        if (board.board_places[row][col - 1].in_game == 0 && board.board_places[row][col - 2].in_game == 0 && board.board_places[row][col - 3].in_game == 0) {
+    if (board->players[current_color].can_castle_queenside) {
+        if (board->board_places[row][col - 1].in_game == 0 && board->board_places[row][col - 2].in_game == 0 && board->board_places[row][col - 3].in_game == 0) {
             move_list.moves[move_list.count].row = row;
             move_list.moves[move_list.count].col = col - 2;
             move_list.count++;
@@ -362,8 +379,8 @@ MoveList king_moves(int row, int col, Board board) {
     return move_list;
 }
 
-int check_pawn_promotion(Board board , int row , int col){
-    Piece p = board.board_places[row][col];
+int check_pawn_promotion(Board *board , int row , int col){
+    Piece p = board->board_places[row][col];
     Color color = p.color ;
     if (p.piece_type != PAWN){
         return 0;
@@ -399,17 +416,17 @@ MoveList get_possible_moves(Board *board, int row, int col) {
     move_list.count = 0;
     // Implementation of move generation logic goes here
     if (board->board_places[row][col].piece_type == PAWN) {
-        move_list = pawn_moves(row, col, *board);
+        move_list = pawn_moves(row, col, board);
     } else if (board->board_places[row][col].piece_type == ROOK) {
-        move_list = rook_moves(row, col, *board);
+        move_list = rook_moves(row, col, board);
     } else if (board->board_places[row][col].piece_type == KNIGHT) {
-        move_list = knight_moves(row, col, *board);
+        move_list = knight_moves(row, col, board);
     } else if (board->board_places[row][col].piece_type == BISHOP) {
-        move_list = bishop_moves(row, col, *board);
+        move_list = bishop_moves(row, col, board);
     } else if (board->board_places[row][col].piece_type == QUEEN) {
-        move_list = queen_moves(row, col, *board);
+        move_list = queen_moves(row, col, board);
     } else if (board->board_places[row][col].piece_type == KING) {
-        move_list = king_moves(row, col, *board);
+        move_list = king_moves(row, col, board);
     }
     return move_list;}
 
@@ -423,7 +440,7 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
     Piece moving_piece = board[move_count].board_places[from_row][from_col];
     Piece dest_piece = board[move_count].board_places[to_row][to_col];
     int dest_was_occupied = dest_piece.in_game;
-    
+    int location = moving_piece.index_in_player;
     if (!moving_piece.in_game) return;
 
     board[move_count + 1].board_places[to_row][to_col] = moving_piece;
@@ -431,6 +448,10 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
     board[move_count + 1].board_places[to_row][to_col].col = to_col;
     board[move_count + 1].board_places[to_row][to_col].has_moved = 1;
     board[move_count + 1].board_places[from_row][from_col].in_game = 0;
+    // board[move_count + 1].players[moving_piece.color].pieces[location] = moving_piece ;
+    board[move_count + 1].players[moving_piece.color].pieces[location].row = to_row;
+    board[move_count + 1].players[moving_piece.color].pieces[location].col = to_col;
+    board[move_count + 1].players[moving_piece.color].pieces[location].has_moved = 1;
     if (moving_piece.piece_type == KING) {
         board[move_count + 1].players[moving_piece.color].king_row = to_row;
         board[move_count + 1].players[moving_piece.color].king_col = to_col;
@@ -464,7 +485,7 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
     int opponent_king_row = board[move_count + 1].players[opponent_color].king_row;
     int opponent_king_col = board[move_count + 1].players[opponent_color].king_col;
     
-    if (is_square_attacked(board[move_count + 1], opponent_king_row, opponent_king_col, moving_piece.color)) {
+    if (is_square_attacked(&board[move_count + 1], opponent_king_row, opponent_king_col, moving_piece.color)) {
         board[move_count + 1].players[opponent_color].is_in_check = 1;
         sound_index = 2;
     } else {
@@ -530,7 +551,7 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
 }
 
 // detect if the square is attacked or not
-int is_square_attacked(Board board, int row, int col, Color attacker_color) {
+int is_square_attacked(Board *board, int row, int col, Color attacker_color) {
     // Implementation of attack detection logic goes here
     // Check for pawn attacks
     int pawn_direction = (attacker_color == WHITE) ? 1 : -1;
@@ -540,7 +561,7 @@ int is_square_attacked(Board board, int row, int col, Color attacker_color) {
         int r = pawn_attack_rows[i];
         int c = pawn_attack_cols[i];
         if (move_within_bounds(r, c)) {
-            Piece p = board.board_places[r][c];
+            Piece p = board->board_places[r][c];
             if (p.in_game && p.color == attacker_color && p.piece_type == PAWN) {
                 return 1; // Square is attacked by a pawn
             }
@@ -555,7 +576,7 @@ int is_square_attacked(Board board, int row, int col, Color attacker_color) {
         int r = row + knight_offsets[i][0];
         int c = col + knight_offsets[i][1];
         if (move_within_bounds(r, c)) {
-            Piece p = board.board_places[r][c];
+            Piece p = board->board_places[r][c];
             if (p.in_game && p.color == attacker_color && p.piece_type == KNIGHT) {
                 return 1; // Square is attacked by a knight
             }
@@ -570,7 +591,7 @@ int is_square_attacked(Board board, int row, int col, Color attacker_color) {
             int r = row + dr * step;
             int c = col + dc * step;
             if (!move_within_bounds(r, c)) break;
-            Piece p = board.board_places[r][c];
+            Piece p = board->board_places[r][c];
             if (p.in_game) {
                 if (p.color == attacker_color && (p.piece_type == ROOK || p.piece_type == QUEEN)) {
                     return 1; // Square is attacked by a rook or queen
@@ -589,7 +610,7 @@ int is_square_attacked(Board board, int row, int col, Color attacker_color) {
             int r = row + dr * step;
             int c = col + dc * step;
             if (!move_within_bounds(r, c)) break;
-            Piece p = board.board_places[r][c];
+            Piece p = board->board_places[r][c];
             if (p.in_game) {
                 if (p.color == attacker_color && (p.piece_type == BISHOP || p.piece_type == QUEEN)) {
                     return 1; // Square is attacked by a bishop or queen
@@ -609,7 +630,7 @@ int is_square_attacked(Board board, int row, int col, Color attacker_color) {
         int r = row + king_offsets[i][0];
         int c = col + king_offsets[i][1];
         if (move_within_bounds(r, c)) {
-            Piece p = board.board_places[r][c];
+            Piece p = board->board_places[r][c];
             if (p.in_game && p.color == attacker_color && p.piece_type == KING) {
                 return 1; // Square is attacked by a king
             }
@@ -621,5 +642,51 @@ int is_square_attacked(Board board, int row, int col, Color attacker_color) {
 
 // detect if there is checkmate
 int is_checkmate(Board *board, Color color){
+    if ((get_total_possible_moves(board , color) == 0)&&board->players[color].is_in_check){
+        return 1;
+    }
+    return 0;
+}
+
+int is_it_llegal_move (int from_row , int from_col , int to_row , int to_col , Board *board){
+    Board Virtual_board = *board;
+    Piece moving_piece = board->board_places[from_row][from_col];
+    Color color = moving_piece.color;
     
+    Virtual_board.board_places[from_row][from_col].in_game = 0;
+    Virtual_board.board_places[to_row][to_col] = moving_piece;
+    Virtual_board.board_places[to_row][to_col].row = to_row;
+    Virtual_board.board_places[to_row][to_col].col = to_col;
+    
+    if (moving_piece.piece_type == KING){
+        Virtual_board.players[color].king_row = to_row;
+        Virtual_board.players[color].king_col = to_col;
+    }
+    
+    if (is_square_attacked(&Virtual_board, Virtual_board.players[color].king_row, 
+                          Virtual_board.players[color].king_col, 
+                          (color == WHITE)? BLACK : WHITE)){
+        return 0;
+    }
+    return 1;
+}
+
+int get_total_possible_moves(Board *board, Color color){
+    int total_possible_moves = 0;
+    Piece *Pieces = board->players[color].pieces ;
+    MoveList piece_moves ;
+    for (int i =0 ; i < 16 ; i++){
+        if (Pieces[i].in_game){
+            piece_moves = get_possible_moves(board , Pieces[i].row , Pieces[i].col);
+            total_possible_moves += piece_moves.count ;
+        }
+    }
+    return total_possible_moves;
+}
+
+int is_stalemate(Board *board, Color color){
+    if ((get_total_possible_moves(board , color) == 0)&&board->players[color].is_in_check == 0){
+        return 1;
+    }
+    return 0;
 }
