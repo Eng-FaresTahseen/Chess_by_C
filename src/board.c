@@ -649,23 +649,31 @@ int is_checkmate(Board *board, Color color){
 }
 
 int is_it_llegal_move (int from_row , int from_col , int to_row , int to_col , Board *board){
-    Board Virtual_board = *board;
+    Board *Virtual_board = (Board*)malloc(sizeof(Board));
+    if (Virtual_board == NULL) return 0;
+    
+    *Virtual_board = *board;  
+    
     Piece moving_piece = board->board_places[from_row][from_col];
     Color color = moving_piece.color;
     
-    Virtual_board.board_places[from_row][from_col].in_game = 0;
-    Virtual_board.board_places[to_row][to_col] = moving_piece;
-    Virtual_board.board_places[to_row][to_col].row = to_row;
-    Virtual_board.board_places[to_row][to_col].col = to_col;
+    Virtual_board->board_places[from_row][from_col].in_game = 0;
+    Virtual_board->board_places[to_row][to_col] = moving_piece;
+    Virtual_board->board_places[to_row][to_col].row = to_row;
+    Virtual_board->board_places[to_row][to_col].col = to_col;
     
     if (moving_piece.piece_type == KING){
-        Virtual_board.players[color].king_row = to_row;
-        Virtual_board.players[color].king_col = to_col;
+        Virtual_board->players[color].king_row = to_row;
+        Virtual_board->players[color].king_col = to_col;
     }
     
-    if (is_square_attacked(&Virtual_board, Virtual_board.players[color].king_row, 
-                          Virtual_board.players[color].king_col, 
-                          (color == WHITE)? BLACK : WHITE)){
+    int is_attacked = is_square_attacked(Virtual_board, 
+                                         Virtual_board->players[color].king_row, 
+                                         Virtual_board->players[color].king_col, 
+                                         (color == WHITE)? BLACK : WHITE);
+    
+    free(Virtual_board);
+    if (is_attacked){
         return 0;
     }
     return 1;
@@ -673,14 +681,17 @@ int is_it_llegal_move (int from_row , int from_col , int to_row , int to_col , B
 
 int get_total_possible_moves(Board *board, Color color){
     int total_possible_moves = 0;
-    Piece *Pieces = board->players[color].pieces ;
-    MoveList piece_moves ;
-    for (int i =0 ; i < 16 ; i++){
-        if (Pieces[i].in_game){
-            piece_moves = get_possible_moves(board , Pieces[i].row , Pieces[i].col);
-            total_possible_moves += piece_moves.count ;
+    MoveList piece_moves;
+    for (int row = 0; row < 8; row++){
+        for (int col = 0; col < 8; col++){
+            Piece p = board->board_places[row][col];
+            if (p.in_game && p.color == color){
+                piece_moves = get_possible_moves(board, row, col);
+                total_possible_moves += piece_moves.count;
+            }
         }
     }
+    
     return total_possible_moves;
 }
 

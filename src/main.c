@@ -410,7 +410,12 @@ int main(int argc, char* argv[]) {
             Mix_PlayChannel(-1, sound[6], 0);
             game_end = 0;
             }
-        }
+        } else if (board[move_count].halfmove_clock >= 50){
+            command_index = 6 ;
+            if (game_end){
+            Mix_PlayChannel(-1, sound[6], 0);
+            game_end = 0;
+        }}
 
 
 
