@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
+#include <string.h>
 
 typedef enum { WHITE, BLACK } Color;
 typedef enum { PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING } Type;
@@ -73,7 +74,6 @@ void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_co
 int check_pawn_promotion(Board *board , int row , int col);
 MoveList get_possible_moves(Board *board, int row, int col);
 void promote_pawn(Board *board, int row, int col, Type new_type);
-int is_in_check(Board *board, Color color);
 int is_checkmate(Board *board, Color color);
 int is_stalemate(Board *board, Color color);
 int get_total_possible_moves(Board *board, Color color);
@@ -84,4 +84,7 @@ int save_file(char *fen);
 void fen_to_board(Board *board, char *fen);
 int is_square_attacked(Board *board, int row, int col, Color attacker_color);
 int is_it_llegal_move (int from_row , int from_col , int to_row , int to_col , Board *board);
+int is_insufficient_material(Board *board);
+int is_valid_fen(const char *fen);
+int is_threefold_repetition(Board board[], int current_move);
 #endif

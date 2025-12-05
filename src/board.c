@@ -218,27 +218,25 @@ MoveList rook_moves(int row, int col, Board *board) {
         for (int step = 1; step < 8; step++) {
             int target_row = row + dr * step;
             int target_col = col + dc * step;
+            if (!move_within_bounds(target_row, target_col)) break;
 
             Piece target_piece = board->board_places[target_row][target_col];
+            int opponent_status = is_piece_opponent(target_piece, current_color);
 
-            if (move_within_bounds(target_row, target_col)) {
-                if (is_it_llegal_move(row , col , target_row , target_col , board)){
-                    if (is_piece_opponent(target_piece,current_color) == 0){
-                        break;
-                    } else if (is_piece_opponent(target_piece,current_color) == 1){
-                        move_list.moves[move_list.count].row = target_row;
-                        move_list.moves[move_list.count].col = target_col;
-                        move_list.count++;
-                        break;
-                    } else if (is_piece_opponent(target_piece,current_color) == 2){
-                        move_list.moves[move_list.count].row = target_row;
-                        move_list.moves[move_list.count].col = target_col;
-                        move_list.count++;
-                    }
-                }
+            if (opponent_status == 0) { // Same color
+                break;
+            }
 
-            } 
-        }
+            if (is_it_llegal_move(row, col, target_row, target_col, board)) {
+                move_list.moves[move_list.count].row = target_row;
+                move_list.moves[move_list.count].col = target_col;
+                move_list.count++;
+            }
+
+            if (opponent_status == 1) { // Opponent piece
+                break;
+            }
+}
     }
     
     return move_list;
@@ -261,25 +259,25 @@ MoveList bishop_moves(int row, int col, Board *board) {
         for (int step = 1; step < 8; step++) {
             int target_row = row + dr * step;
             int target_col = col + dc * step;
+            if (!move_within_bounds(target_row, target_col)) break;
 
             Piece target_piece = board->board_places[target_row][target_col];
-            if (move_within_bounds(target_row, target_col)) {
-                if (is_it_llegal_move(row , col , target_row , target_col , board)){
-                    if (is_piece_opponent(target_piece,current_color) == 0){
-                        break;}
-                    else if (is_piece_opponent(target_piece,current_color) == 1){
-                        move_list.moves[move_list.count].row = target_row;
-                        move_list.moves[move_list.count].col = target_col;
-                        move_list.count++;
-                        break;}
-                    else if (is_piece_opponent(target_piece,current_color) == 2){
-                        move_list.moves[move_list.count].row = target_row;
-                        move_list.moves[move_list.count].col = target_col;
-                        move_list.count++;
-                    }
-                }
+            int opponent_status = is_piece_opponent(target_piece, current_color);
+
+            if (opponent_status == 0) { // Same color
+                break;
             }
-        }
+
+            if (is_it_llegal_move(row, col, target_row, target_col, board)) {
+                move_list.moves[move_list.count].row = target_row;
+                move_list.moves[move_list.count].col = target_col;
+                move_list.count++;
+            }
+
+            if (opponent_status == 1) { // Opponent piece
+                break;
+            }
+}
     }
     return move_list;
 }
@@ -305,26 +303,25 @@ MoveList queen_moves(int row, int col, Board *board) {
         for (int step = 1; step < 8; step++) {
             int target_row = row + dr * step;
             int target_col = col + dc * step;
+            if (!move_within_bounds(target_row, target_col)) break;
 
             Piece target_piece = board->board_places[target_row][target_col];
+            int opponent_status = is_piece_opponent(target_piece, current_color);
 
-            if (move_within_bounds(target_row, target_col)) {
-                if (is_it_llegal_move(row , col , target_row , target_col , board)){
-                    if (is_piece_opponent(target_piece,current_color) == 0){
-                        break;
-                    } else if (is_piece_opponent(target_piece,current_color) == 1){
-                        move_list.moves[move_list.count].row = target_row;
-                        move_list.moves[move_list.count].col = target_col;
-                        move_list.count++;
-                        break;
-                    } else if (is_piece_opponent(target_piece,current_color) == 2){
-                        move_list.moves[move_list.count].row = target_row;
-                        move_list.moves[move_list.count].col = target_col;
-                        move_list.count++;
-                    }
-                }
-            } 
-        }
+            if (opponent_status == 0) { // Same color
+                break;
+            }
+
+            if (is_it_llegal_move(row, col, target_row, target_col, board)) {
+                move_list.moves[move_list.count].row = target_row;
+                move_list.moves[move_list.count].col = target_col;
+                move_list.count++;
+            }
+
+            if (opponent_status == 1) { // Opponent piece
+                break;
+            }
+}
     }
     return move_list;
 }
@@ -700,4 +697,115 @@ int is_stalemate(Board *board, Color color){
         return 1;
     }
     return 0;
+}
+
+int is_insufficient_material(Board *board) {
+    int white_knights = 0, white_bishops = 0;
+    int black_knights = 0, black_bishops = 0;
+
+    int white_bishop_square_color = -1;
+    int black_bishop_square_color = -1;
+
+    for (int i = 0; i < 16; i++) {
+        Piece p;
+
+        // WHITE pieces
+        p = board->players[WHITE].pieces[i];
+        if (p.in_game && p.piece_type != KING) {
+            if (p.piece_type == PAWN || p.piece_type == ROOK || p.piece_type == QUEEN)
+                return 0;
+
+            if (p.piece_type == KNIGHT)
+                white_knights++;
+
+            if (p.piece_type == BISHOP) {
+                white_bishops++;
+                white_bishop_square_color = (p.row + p.col) % 2;
+            }
+        }
+
+        // BLACK pieces
+        p = board->players[BLACK].pieces[i];
+        if (p.in_game && p.piece_type != KING) {
+            if (p.piece_type == PAWN || p.piece_type == ROOK || p.piece_type == QUEEN)
+                return 0;
+
+            if (p.piece_type == KNIGHT)
+                black_knights++;
+
+            if (p.piece_type == BISHOP) {
+                black_bishops++;
+                black_bishop_square_color = (p.row + p.col) % 2;
+            }
+        }
+    }
+
+    // 1) K vs K
+    if (white_knights + white_bishops == 0 &&
+        black_knights + black_bishops == 0)
+        return 1;
+
+    // 2) K + minor vs K
+    if ((white_knights == 1 && white_bishops == 0 && black_knights + black_bishops == 0) ||
+        (black_knights == 1 && black_bishops == 0 && white_knights + white_bishops == 0))
+        return 1;
+
+    if ((white_bishops == 1 && white_knights == 0 && black_knights + black_bishops == 0) ||
+        (black_bishops == 1 && black_knights == 0 && white_knights + white_bishops == 0))
+        return 1;
+
+    // 3) K + B vs K + B (same color bishops)
+    if (white_bishops == 1 && black_bishops == 1 &&
+        white_knights == 0 && black_knights == 0 &&
+        white_bishop_square_color == black_bishop_square_color)
+        return 1;
+
+    return 0;
+}
+
+int is_threefold_repetition(Board board[], int current_move) {
+    if (current_move < 8) return 0; // Need at least 8 moves for repetition
+    
+    char current_fen[200];
+    board_to_fen(&board[current_move], current_fen);
+    
+    // Extract only position part (before first space)
+    char current_pos[100];
+    int i = 0;
+    while (current_fen[i] != ' ' && current_fen[i] != '\0') {
+        current_pos[i] = current_fen[i];
+        i++;
+    }
+    current_pos[i] = '\0';
+    
+    int repetition_count = 1; // Current position counts as 1
+    
+    // Check previous positions (only need to check positions with same turn)
+    // Go back by 4 moves each time (2 full moves = same player's turn)
+    for (int move = current_move - 4; move >= 0; move -= 4) {
+        char check_fen[200];
+        board_to_fen(&board[move], check_fen);
+        
+        // Extract position part
+        char check_pos[100];
+        int j = 0;
+        while (check_fen[j] != ' ' && check_fen[j] != '\0') {
+            check_pos[j] = check_fen[j];
+            j++;
+        }
+        check_pos[j] = '\0';
+        
+        // Compare positions
+        if (strcmp(current_pos, check_pos) == 0) {
+            repetition_count++;
+            if (repetition_count >= 3) {
+                return 1; // Threefold repetition found
+            }
+        }
+        
+        // If halfmove clock was reset, no need to check further back
+        if (board[move].halfmove_clock == 0) break;
+    }
+    
+    return 0; // No threefold repetition
 }

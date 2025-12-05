@@ -345,11 +345,25 @@ int main(int argc, char* argv[]) {
                                     move_count = 0 ;
                                     times = 0 ;
                                     init_board(&board[move_count]);
-                                    fen_to_board(&board[move_count], fen);       
-                                    printf("Game Loaded Successfully!\n");
-                                    command_index = 8 ;
-                                }
+                                    if (!is_valid_fen(fen)) {
+                                        printf("Invalid FEN file!\n");
+                                        command_index = 14;
+                                    } else {
+                                        move_count = 0;
+                                        times = 0;
+                                        init_board(&board[move_count]);
+                                        fen_to_board(&board[move_count], fen);
+                                        // Update move_count based on loaded game
+                                        move_count = (board[0].fullmove_number - 1) * 2;
+                                        if (board[0].current_turn == BLACK) move_count++;
+                                        
+                                        latest_move = move_count;
+                                        
+                                        printf("Game Loaded Successfully!\n");
+                                        command_index = 8;
+                                    }
 
+                                }
                                 fclose(file);
                             }
 
@@ -390,37 +404,48 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // check game satats
 
-    if (is_checkmate(&board[move_count],(move_count % 2) ? BLACK : WHITE)){
-        game_over = 1 ;
-        if (move_count % 2){
-            // White wins
-            command_index = 1;
-        } else {
-            command_index = 2 ;
-        }
-        if (game_end){
-            Mix_PlayChannel(-1, sound[6], 0);
-            game_end = 0;
-        }}
-        else if(is_stalemate(&board[move_count],(move_count % 2) ? WHITE : BLACK)){
-            command_index = 3 ;
-            if (game_end){
-            Mix_PlayChannel(-1, sound[6], 0);
-            game_end = 0;
+        // check game status
+        if (is_checkmate(&board[move_count], (move_count % 2) ? BLACK : WHITE)) {
+            game_over = 1;
+            if (move_count % 2) {
+                command_index = 1; // White wins
+            } else {
+                command_index = 2; // Black wins
             }
-        } else if (board[move_count].halfmove_clock >= 50){
-            command_index = 6 ;
-            if (game_end){
-            Mix_PlayChannel(-1, sound[6], 0);
-            game_end = 0;
-        }}
-
-
-
-
-
+            if (game_end) {
+                Mix_PlayChannel(-1, sound[6], 0);
+                game_end = 0;
+            }
+        } 
+        else if (is_stalemate(&board[move_count], (move_count % 2) ? WHITE : BLACK)) {
+            command_index = 3;
+            if (game_end) {
+                Mix_PlayChannel(-1, sound[6], 0);
+                game_end = 0;
+            }
+        } 
+        else if (board[move_count].halfmove_clock >= 50) {
+            command_index = 6;
+            if (game_end) {
+                Mix_PlayChannel(-1, sound[6], 0);
+                game_end = 0;
+            }
+        } 
+        else if (is_insufficient_material(&board[move_count])) {
+            command_index = 4;
+            if (game_end) {
+                Mix_PlayChannel(-1, sound[6], 0);
+                game_end = 0;
+            }
+        }
+        else if (is_threefold_repetition(board, move_count)) {
+            command_index = 5; // Draw by threefold repetition
+            if (game_end) {
+                Mix_PlayChannel(-1, sound[6], 0);
+                game_end = 0;
+            }
+        }
 
         SDL_RenderPresent(ren);
     }

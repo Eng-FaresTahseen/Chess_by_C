@@ -1,10 +1,17 @@
 # include "board.h"
 # include <stdio.h>
 # include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 void piece_encoder(char piece, Board *board, int row, int col) {
     Piece p;
-    p.in_game = 1; 
+    p.in_game = 1;
+    p.selected = 0;
+    p.captured = 0;
+    p.is_attacked = 0;
+    p.has_moved = 1; // Assume pieces have moved when loading from FEN
+    p.id = row * 8 + col; // Generate unique ID
 
     switch (piece) {
         case 'p': 
@@ -55,10 +62,14 @@ void piece_encoder(char piece, Board *board, int row, int col) {
         case 'k': 
             p.piece_type = KING;
             p.color = BLACK;
+            // Check if king hasn't moved based on position
+            if (row == 0 && col == 4) p.has_moved = 0;
             break;
         case 'K': 
             p.piece_type = KING;
             p.color = WHITE;
+            // Check if king hasn't moved based on position
+            if (row == 7 && col == 4) p.has_moved = 0;
             break;
 
         default:
@@ -72,6 +83,77 @@ void piece_encoder(char piece, Board *board, int row, int col) {
     board->board_places[row][col] = p;
 }
 
+int is_valid_fen(const char *fen) {
+    if (fen == NULL || strlen(fen) < 10) return 0;
+
+    char fen_copy[300];
+    strcpy(fen_copy, fen);
+
+    char *parts[6];
+    char *token = strtok(fen_copy, " ");
+    int count = 0;
+
+    while (token && count < 6) {
+        parts[count++] = token;
+        token = strtok(NULL, " ");
+    }
+
+ 
+    if (count != 6) return 0;
+
+ 
+    char *board_part = parts[0];
+    int rank_count = 0;
+
+    char board_copy[200];
+    strcpy(board_copy, board_part);
+
+    char *rank = strtok(board_copy, "/");
+
+    while (rank) {
+        int sum = 0;
+        for (int i = 0; rank[i]; i++) {
+            if (rank[i] >= '1' && rank[i] <= '8')
+                sum += rank[i] - '0';
+            else if (strchr("rnbqkpRNBQKP", rank[i]))
+                sum += 1;
+            else
+                return 0; 
+        }
+
+        if (sum != 8) return 0;
+
+        rank_count++;
+        rank = strtok(NULL, "/");
+    }
+
+    if (rank_count != 8) return 0;
+
+   
+    if (!(parts[1][0] == 'w' || parts[1][0] == 'b')) return 0;
+
+   
+    if (strcmp(parts[2], "-") != 0) {
+        for (int i = 0; parts[2][i]; i++) {
+            if (!strchr("KQkq", parts[2][i])) return 0;
+        }
+    }
+
+    
+    if (strcmp(parts[3], "-") != 0) {
+        if (!(parts[3][0] >= 'a' && parts[3][0] <= 'h')) return 0;
+        if (!(parts[3][1] == '3' || parts[3][1] == '6')) return 0;
+    }
+
+    
+    for (int i = 0; parts[4][i]; i++)
+        if (!isdigit(parts[4][i])) return 0;
+
+    for (int i = 0; parts[5][i]; i++)
+        if (!isdigit(parts[5][i])) return 0;
+
+    return 1;
+}
 
 int is_file_found(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -191,16 +273,36 @@ int save_file(char *fen){
 }
 
 void fen_to_board(Board *board, char *fen) {
+    // Reset board first
+    for(int row = 0; row < 8; row++) {
+        for(int col = 0; col < 8; col++) {
+            board->board_places[row][col].in_game = 0;
+            board->board_places[row][col].selected = 0;
+            board->board_places[row][col].row = row;
+            board->board_places[row][col].col = col;
+            board->board_places[row][col].captured = 0;
+            board->board_places[row][col].has_moved = 0;
+            board->board_places[row][col].is_attacked = 0;
+        }
+    }
+    
+    // Reset players
+    board->players[WHITE].total_pieces = 0;
+    board->players[BLACK].total_pieces = 0;
+    board->players[WHITE].total_captured = 0;
+    board->players[BLACK].total_captured = 0;
+    board->players[WHITE].is_in_check = 0;
+    board->players[BLACK].is_in_check = 0;
+    
     int row = 0, col = 0;
     int i = 0;
+    int white_piece_count = 0, black_piece_count = 0;
 
+    // Parse board position
     while (fen[i] != '\0' && fen[i] != ' ') {
         if (fen[i] >= '1' && fen[i] <= '8') {
             int empty = fen[i] - '0';
-            for (int j = 0; j < empty; j++) {
-                board->board_places[row][col].in_game = 0;
-                col++;
-            }
+            col += empty;
         }
         else if (fen[i] == '/') {
             row++;
@@ -208,17 +310,42 @@ void fen_to_board(Board *board, char *fen) {
         }
         else { 
             piece_encoder(fen[i], board, row, col);
+            Piece *p = &board->board_places[row][col];
+            
+            // Add to player's pieces array
+            if (p->color == WHITE) {
+                p->index_in_player = white_piece_count;
+                board->players[WHITE].pieces[white_piece_count] = *p;
+                if (p->piece_type == KING) {
+                    board->players[WHITE].king_row = row;
+                    board->players[WHITE].king_col = col;
+                }
+                white_piece_count++;
+            } else {
+                p->index_in_player = black_piece_count;
+                board->players[BLACK].pieces[black_piece_count] = *p;
+                if (p->piece_type == KING) {
+                    board->players[BLACK].king_row = row;
+                    board->players[BLACK].king_col = col;
+                }
+                black_piece_count++;
+            }
             col++;
         }
         i++;
     }
-
-    i++; 
-
     
+    board->players[WHITE].total_pieces = white_piece_count;
+    board->players[BLACK].total_pieces = black_piece_count;
+
+    i++; // Skip space
+
+    // Parse active color
     if (fen[i] == 'w') board->current_turn = WHITE;
     else if (fen[i] == 'b') board->current_turn = BLACK;
-    i += 2; 
+    i += 2; // Skip color and space
+    
+    // Parse castling rights
     board->players[WHITE].can_castle_kingside = 0;
     board->players[WHITE].can_castle_queenside = 0;
     board->players[BLACK].can_castle_kingside = 0;
@@ -239,7 +366,7 @@ void fen_to_board(Board *board, char *fen) {
         i++; 
     }
 
-    
+    // Parse en passant
     if (fen[i] == '-') {
         board->en_passant_row = -1;
         board->en_passant_col = -1;
@@ -250,8 +377,22 @@ void fen_to_board(Board *board, char *fen) {
         i += 3; 
     }
 
-    
+    // Parse halfmove and fullmove
     board->halfmove_clock = 0;
     board->fullmove_number = 1;
     sscanf(fen + i, "%d %d", &board->halfmove_clock, &board->fullmove_number);
+    
+    // Initialize other fields
+    board->move_count = 0;
+    board->selected_piece = NULL;
+    board->is_checkmate = 0;
+    board->is_stalemate = 0;
+    board->is_draw = 0;
+    
+    // Initialize chessboard rectangles
+    for (int r = 0; r < 8; r++) {
+        for (int c = 0; c < 8; c++) {
+            board->chessboard[r][c] = (SDL_Rect){80 + c*80, 125 + r*80, 80, 80};
+        }
+    }
 }
