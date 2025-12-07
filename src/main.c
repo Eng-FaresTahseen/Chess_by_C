@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    SDL_Window *win = SDL_CreateWindow("Chess" ,SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WINDOW_WIDTH,WINDOW_HEIGHT,SDL_WINDOW_SHOWN);
+    SDL_Window *win = SDL_CreateWindow("Fares Chess" ,SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WINDOW_WIDTH,WINDOW_HEIGHT,SDL_WINDOW_SHOWN);
     if (win == NULL) {
         printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
         SDL_Quit();
@@ -456,7 +456,7 @@ int main(int argc, char* argv[]) {
             SDL_DestroyTexture(piece_textures[i][j]);
         }
     }
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 8; i++) {
         Mix_FreeChunk(sound[i]);
     }
     Mix_CloseAudio();

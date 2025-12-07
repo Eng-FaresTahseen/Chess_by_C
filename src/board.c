@@ -352,26 +352,27 @@ MoveList king_moves(int row, int col, Board *board) {
         }
     }
     // Castling moves
-    if (board->players[current_color].can_castle_kingside) {
+    // Kingside castling
+    if (board->players[current_color].can_castle_kingside && board->board_places[row][col + 1].in_game == 0 && board->board_places[row][col + 2].in_game == 0) {
         if (!(is_square_attacked(board, row, col, (current_color == WHITE) ? BLACK : WHITE)) &&
             !(is_square_attacked(board, row, col + 1, (current_color == WHITE) ? BLACK : WHITE)) &&
             !(is_square_attacked(board, row, col + 2, (current_color == WHITE) ? BLACK : WHITE))) {
-        if (board->board_places[row][col + 1].in_game == 0 && board->board_places[row][col + 2].in_game == 0) {
             move_list.moves[move_list.count].row = row;
             move_list.moves[move_list.count].col = col + 2;
             move_list.count++;
         }
-    }}
-    if (!(is_square_attacked(board, row, col, (current_color == WHITE) ? BLACK : WHITE)) &&
-        !(is_square_attacked(board, row, col - 1, (current_color == WHITE) ? BLACK : WHITE)) &&
-        !(is_square_attacked(board, row, col - 2, (current_color == WHITE) ? BLACK : WHITE))) {
-    if (board->players[current_color].can_castle_queenside) {
-        if (board->board_places[row][col - 1].in_game == 0 && board->board_places[row][col - 2].in_game == 0 && board->board_places[row][col - 3].in_game == 0) {
+    }
+
+    // Queenside castling  
+    if (board->players[current_color].can_castle_queenside && board->board_places[row][col - 1].in_game == 0 && board->board_places[row][col - 2].in_game == 0 && board->board_places[row][col - 3].in_game == 0) {
+        if (!(is_square_attacked(board, row, col, (current_color == WHITE) ? BLACK : WHITE)) &&
+            !(is_square_attacked(board, row, col - 1, (current_color == WHITE) ? BLACK : WHITE)) &&
+            !(is_square_attacked(board, row, col - 2, (current_color == WHITE) ? BLACK : WHITE))) {
             move_list.moves[move_list.count].row = row;
             move_list.moves[move_list.count].col = col - 2;
             move_list.count++;
         }
-    }}
+    }
     
     return move_list;
 }
@@ -459,15 +460,20 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
         if (abs(to_col - from_col) == 2) {
             sound_index = 3;
             if (to_col == 6) { // kingside
-                board[move_count + 1].board_places[to_row][5] = board[move_count + 1].board_places[to_row][7];
+                Piece rook = board[move_count + 1].board_places[to_row][7];
+                int rook_index = rook.index_in_player;
+                board[move_count + 1].board_places[to_row][5] = rook;
                 board[move_count + 1].board_places[to_row][5].col = 5;
+                board[move_count + 1].board_places[to_row][5].has_moved = 1;
                 board[move_count + 1].board_places[to_row][7].in_game = 0;
+                board[move_count + 1].players[moving_piece.color].pieces[rook_index].col = 5;
+                board[move_count + 1].players[moving_piece.color].pieces[rook_index].has_moved = 1;
+            }
             } else if (to_col == 2) { // queenside
                 board[move_count + 1].board_places[to_row][3] = board[move_count + 1].board_places[to_row][0];
                 board[move_count + 1].board_places[to_row][3].col = 3;
                 board[move_count + 1].board_places[to_row][0].in_game = 0;
             }
-        }
     }
     if (dest_was_occupied) {
         sound_index = 1;
