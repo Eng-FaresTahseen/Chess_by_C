@@ -468,12 +468,18 @@ void move_piece(Board board[], int from_row, int from_col, int to_row, int to_co
                 board[move_count + 1].board_places[to_row][7].in_game = 0;
                 board[move_count + 1].players[moving_piece.color].pieces[rook_index].col = 5;
                 board[move_count + 1].players[moving_piece.color].pieces[rook_index].has_moved = 1;
-            }
+            
             } else if (to_col == 2) { // queenside
-                board[move_count + 1].board_places[to_row][3] = board[move_count + 1].board_places[to_row][0];
+                Piece rook = board[move_count + 1].board_places[to_row][0];
+                int rook_index = rook.index_in_player;
+                board[move_count + 1].board_places[to_row][3] = rook;
                 board[move_count + 1].board_places[to_row][3].col = 3;
+                board[move_count + 1].board_places[to_row][3].has_moved = 1;
                 board[move_count + 1].board_places[to_row][0].in_game = 0;
+                board[move_count + 1].players[moving_piece.color].pieces[rook_index].col = 3;
+                board[move_count + 1].players[moving_piece.color].pieces[rook_index].has_moved = 1;
             }
+        }
     }
     if (dest_was_occupied) {
         sound_index = 1;
