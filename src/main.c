@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
     Board board[500]; // array of boards to store game states for undo/redo
     init_board(&board[move_count]); // initialize the first board
     SDL_Event event;
-    Type pieces_captured_type[2][15]; // types of captured pieces for display
+
     SDL_Rect pieces_captured[2][15]; // rectangles for captured pieces display
 
     SDL_Color color_black = {0, 0, 0, 255};
@@ -342,33 +342,39 @@ int main(int argc, char* argv[]) {
                                     command_index = 14;
                                 } else {
                                     fen[strcspn(fen, "\n")] = '\0';
-                                    move_count = 0 ;
-                                    times = 0 ;
-                                    init_board(&board[move_count]);
+                                    
                                     if (!is_valid_fen(fen)) {
                                         printf("Invalid FEN file!\n");
                                         command_index = 14;
                                     } else {
+                                        // Reset everything
                                         move_count = 0;
+                                        latest_move = 0;
                                         times = 0;
+                                        game_over = 0;
+                                        game_end = 1;
+                                        there_is_a_promotion = 0;
+                                        
+                                        // Initialize board and load FEN
                                         init_board(&board[move_count]);
                                         fen_to_board(&board[move_count], fen);
-                                        // Update move_count based on loaded game
-                                        move_count = (board[0].fullmove_number - 1) * 2;
-                                        if (board[0].current_turn == BLACK) move_count++;
                                         
-                                        latest_move = move_count;
+                                        // Clear selections
+                                        board[move_count].selected_piece = NULL;
+                                        highlighted_squares.count = 0;
+                                        for (int i = 0; i < 27; i++) {
+                                            highlighted_squares.moves[i].row = -1;
+                                            highlighted_squares.moves[i].col = -1;
+                                        }
                                         
                                         printf("Game Loaded Successfully!\n");
                                         command_index = 8;
                                     }
-
                                 }
                                 fclose(file);
                             }
-
                         } else {
-                            printf("The file is not found !");
+                            printf("The file is not found!\n");
                             command_index = 14;
                         }
                     }
@@ -403,7 +409,6 @@ int main(int argc, char* argv[]) {
             SDL_RenderCopy(ren, tex, NULL, &pieces_captured[1][i]);
         }
     }
-
 
         // check game status
         if (is_checkmate(&board[move_count], (move_count % 2) ? BLACK : WHITE)) {
