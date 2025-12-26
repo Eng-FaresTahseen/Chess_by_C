@@ -433,6 +433,7 @@ int main(int argc, char* argv[]) {
             }
         } 
         else if (is_stalemate(&board[move_count], (move_count % 2) ? WHITE : BLACK)) {
+            game_over = 1;
             command_index = 3;
             if (game_end) {
                 Mix_PlayChannel(-1, sound[6], 0);
@@ -440,6 +441,7 @@ int main(int argc, char* argv[]) {
             }
         } 
         else if (board[move_count].halfmove_clock >= 50) {
+            game_over = 1;
             command_index = 6;
             if (game_end) {
                 Mix_PlayChannel(-1, sound[6], 0);
@@ -447,6 +449,7 @@ int main(int argc, char* argv[]) {
             }
         } 
         else if (is_insufficient_material(&board[move_count])) {
+            game_over = 1;
             command_index = 4;
             if (game_end) {
                 Mix_PlayChannel(-1, sound[6], 0);
@@ -454,6 +457,7 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (is_threefold_repetition(board, move_count)) {
+            game_over = 1;
             command_index = 5; // Draw by threefold repetition
             if (game_end) {
                 Mix_PlayChannel(-1, sound[6], 0);
