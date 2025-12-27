@@ -5,15 +5,15 @@
 #include <SDL2/SDL_mixer.h>
 #include <string.h>
 
-typedef enum { WHITE, BLACK } Color;
-typedef enum { PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING } Type;
+typedef enum { WHITE, BLACK } Color; // to indicate the piece selected
+typedef enum { PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING } Type; // all possible different items
 
 typedef struct {
     int row ;
     int col ;
 } Move;
 typedef struct {
-    Move moves[27];
+    Move moves[27]; // max moves for each piece especially for queen
     int count;
 } MoveList;
 typedef struct {
@@ -60,7 +60,7 @@ typedef struct {
     int is_draw;
 } Board;
 
-int move_within_bounds(int row, int col);
+int move_within_bounds(int row, int col); // to indicate that it is in bounds
 MoveList pawn_moves(int row, int col, Board *board);
 MoveList rook_moves(int row, int col, Board *board);
 MoveList knight_moves(int row, int col, Board *board);
@@ -73,7 +73,7 @@ void show_possible_moves(Board *board, MoveList moves, SDL_Renderer *ren);
 void move_piece(Board Board[], int from_row, int from_col, int to_row, int to_col , int move_count , Mix_Chunk *sound[]);
 int check_pawn_promotion(Board *board , int row , int col);
 MoveList get_possible_moves(Board *board, int row, int col);
-void promote_pawn(Board *board, int row, int col, Type new_type);
+void promote_pawn(Board *board, int row, int col, Type new_type); // keybaord uses
 int is_checkmate(Board *board, Color color);
 int is_stalemate(Board *board, Color color);
 int get_total_possible_moves(Board *board, Color color);
