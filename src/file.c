@@ -3,7 +3,7 @@
 # include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
+// implementing the FEN method for saving and loading
 void piece_encoder(char piece, Board *board, int row, int col) {
     Piece p;
     p.in_game = 1;
@@ -12,7 +12,7 @@ void piece_encoder(char piece, Board *board, int row, int col) {
     p.is_attacked = 0;
     p.has_moved = 1; // Assume pieces have moved when loading from FEN
     p.id = row * 8 + col; // Generate unique ID
-
+    // each id has its characteristics
     switch (piece) {
         case 'p': 
             p.piece_type = PAWN;
